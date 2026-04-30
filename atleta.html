@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atleta | Yair Timings</title>
+    <script>
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#00CFFF',
+                        dark: '#0E1525',
+                        card: '#141E33',
+                        cardAlt: '#10192c',
+                        danger: '#ef4444',
+                        success: '#22c55e',
+                        warn: '#f59e0b'
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Exo+2:wght@400;600;700;800&display=swap');
+        body { font-family: 'Exo 2', sans-serif; }
+        h1, h2, h3 { font-family: 'Russo One', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.45); border-radius: 999px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        #mapa-atleta .leaflet-control-attribution { font-size: 10px; }
+        #mapa-atleta .leaflet-popup-content-wrapper,
+        #mapa-atleta .leaflet-popup-tip {
+            background: #141E33;
+            color: #fff;
+            border: 1px solid rgba(0, 207, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-dark text-gray-900 dark:text-white min-h-screen transition-colors duration-300">
+    <div class="bg-gradient-to-br from-card via-dark to-black border-b border-white/10">
+        <nav class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+                <button id="btn-volver" class="w-11 h-11 rounded-2xl bg-white/10 text-white/70 hover:text-white border border-white/10 transition shrink-0">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div class="w-12 h-12 rounded-2xl bg-brand/15 text-brand flex items-center justify-center border border-brand/20 shrink-0">
+                    <i class="fa-solid fa-person-running text-xl"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs uppercase tracking-[0.3em] text-white/40 font-bold">Ficha del atleta</p>
+                    <h1 id="titulo-evento" class="text-2xl md:text-3xl text-white uppercase truncate">Evento</h1>
+                </div>
+            </div>
+            <button id="theme-toggle" class="w-11 h-11 rounded-2xl bg-white/10 text-white/70 hover:text-white border border-white/10 transition shrink-0">
+                <i id="theme-toggle-dark-icon" class="fa-solid fa-moon hidden"></i>
+                <i id="theme-toggle-light-icon" class="fa-solid fa-sun hidden"></i>
+            </button>
+        </nav>
+        <header class="max-w-7xl mx-auto px-6 pb-10">
+            <p id="subtitulo-evento" class="text-white/60 max-w-3xl">Analisis individual, legado local y puntos de control segun el JSON interno del evento.</p>
+        </header>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        <section id="estado-cargando" class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 p-12 text-center">
+            <div class="w-16 h-16 rounded-full mx-auto mb-4 bg-brand/15 text-brand flex items-center justify-center">
+                <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-black uppercase mb-3">Cargando atleta</h2>
+            <p class="text-gray-500 dark:text-gray-400">Preparando comparativos, control points y acciones del corredor.</p>
+        </section>
+
+        <section id="estado-error" class="hidden bg-white dark:bg-card rounded-3xl border border-red-200 dark:border-red-900/40 p-12 text-center">
+            <div class="w-16 h-16 rounded-full mx-auto mb-4 bg-red-100 dark:bg-red-500/10 text-red-500 flex items-center justify-center">
+                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-black uppercase mb-3">No fue posible cargar al atleta</h2>
+            <p id="error-texto" class="text-gray-500 dark:text-gray-400"></p>
+        </section>
+
+        <section id="contenido-atleta" class="hidden space-y-6">
+            <div id="aviso-extraoficial" class="hidden bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 text-yellow-700 dark:text-yellow-300 rounded-2xl px-4 py-3 text-sm font-bold">
+                <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+                Resultados extraoficiales. Sujetos a validacion del evento.
+            </div>
+
+            <div class="grid xl:grid-cols-[1.1fr_0.9fr] gap-6">
+                <div class="space-y-6">
+                    <article class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+                        <div class="relative px-6 py-6 md:px-8 md:py-7">
+                            <div class="absolute top-6 left-6">
+                                <span id="ui-estado-carrera" class="inline-flex items-center gap-2 px-3 py-2 rounded-full text-[10px] uppercase tracking-[0.24em] font-black border">--</span>
+                            </div>
+                            <div class="absolute top-6 right-6">
+                                <span id="ui-distancia-cat" class="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-brand/10 border border-brand/20 text-brand text-[10px] uppercase tracking-[0.24em] font-black">-</span>
+                            </div>
+                            <div class="pt-14 md:pt-10 flex flex-col items-center text-center">
+                                <div class="w-24 h-24 rounded-full bg-gray-50 dark:bg-cardAlt border-4 border-brand/30 flex items-center justify-center shadow-lg shadow-brand/10 mb-4">
+                                    <i id="ui-icono-genero" class="fa-solid fa-user text-4xl text-gray-400 dark:text-gray-600"></i>
+                                </div>
+                                <h2 id="ui-nombre" class="text-3xl md:text-4xl font-black uppercase leading-tight">Atleta</h2>
+                                <p id="ui-meta" class="text-gray-500 dark:text-gray-400 mt-3">Dorsal, distancia y categoria</p>
+                                <div class="flex flex-wrap items-center justify-center gap-2 mt-4">
+                                    <span id="ui-badge-dorsal" class="px-3 py-2 rounded-full bg-gray-100 dark:bg-cardAlt text-gray-800 dark:text-white text-xs font-black uppercase tracking-wide">#-</span>
+                                    <span id="ui-badge-genero" class="px-3 py-2 rounded-full text-xs font-black uppercase tracking-wide bg-blue-500/15 text-blue-500">-</span>
+                                    <span id="ui-badge-pais" class="px-3 py-2 rounded-full bg-gray-100 dark:bg-cardAlt text-gray-600 dark:text-gray-300 text-xs font-black uppercase tracking-wide">COL</span>
+                                    <span id="ui-badge-categoria" class="px-3 py-2 rounded-full bg-white dark:bg-dark border border-gray-200 dark:border-gray-700 text-xs font-black uppercase tracking-wide">General</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="px-6 pb-6 md:px-8 md:pb-8">
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                                    <p class="text-xs uppercase font-bold text-gray-500">Tiempo oficial</p>
+                                    <p id="ui-tiempo" class="text-3xl font-black mt-2 text-green-500 font-mono">--:--:--</p>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                                    <p class="text-xs uppercase font-bold text-gray-500">Tiempo chip</p>
+                                    <p id="ui-tiempo-chip" class="text-3xl font-black mt-2 text-brand font-mono">--:--:--</p>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                                    <p class="text-xs uppercase font-bold text-gray-500">Ritmo promedio</p>
+                                    <p id="ui-ritmo" class="text-3xl font-black mt-2 font-mono">--:--</p>
+                                    <p class="text-[11px] text-gray-500 mt-1">min/km</p>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                                    <p class="text-xs uppercase font-bold text-gray-500">Posiciones</p>
+                                    <p id="ui-posiciones" class="text-sm font-bold mt-2 leading-6">General -, Genero -, Categoria -</p>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+                        <div class="flex items-center justify-between gap-4 mb-4">
+                            <div>
+                                <p class="text-xs uppercase tracking-[0.3em] text-brand font-bold mb-2">Acciones</p>
+                                <h3 class="text-2xl font-black uppercase">Herramientas del atleta</h3>
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 text-right max-w-xs">
+                                Comparte, abre PDF, revisa fotos o prepara un reclamo rapido.
+                            </div>
+                        </div>
+                        <div class="grid sm:grid-cols-2 xl:grid-cols-5 gap-3">
+                            <button id="btn-compartir" class="bg-green-500 hover:bg-green-400 text-white py-3 rounded-2xl font-black transition text-sm">
+                                <i class="fa-brands fa-whatsapp mr-2"></i> Compartir
+                            </button>
+                            <button id="btn-pdf-atleta" class="bg-white dark:bg-cardAlt hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 py-3 px-2 rounded-2xl font-black transition text-xs xl:text-[12px] leading-tight">
+                                <i class="fa-solid fa-file-pdf mr-1 text-red-500"></i> Visualizar resultados en PDF
+                            </button>
+                            <button id="btn-diploma" class="bg-yellow-400 hover:bg-yellow-300 text-black py-3 rounded-2xl font-black transition text-sm disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                                <i class="fa-solid fa-medal mr-2"></i> Diploma
+                            </button>
+                            <button id="btn-chuspic" class="bg-brand hover:bg-cyan-300 text-dark py-3 rounded-2xl font-black transition text-sm hidden">
+                                <i class="fa-solid fa-camera mr-2"></i> Fotos
+                            </button>
+                            <button id="btn-reclamo" class="bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-500/20 py-3 rounded-2xl font-black transition text-sm">
+                                <i class="fa-solid fa-triangle-exclamation mr-2"></i> Reclamo
+                            </button>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="space-y-6">
+                    <article class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+                        <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
+                            <p class="text-xs uppercase tracking-[0.3em] text-brand font-bold mb-2">Comparativo</p>
+                            <h3 class="text-2xl font-black uppercase">Rendimiento en distancia</h3>
+                        </div>
+                        <div id="stats-grid" class="p-6 grid grid-cols-2 gap-4"></div>
+                    </article>
+
+                    <article class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+                        <p class="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400 font-bold mb-2">Lectura rapida</p>
+                        <h3 class="text-2xl font-black uppercase mb-5">Resumen competitivo</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex items-center justify-between text-sm font-bold mb-2">
+                                    <span>Percentil en la distancia</span>
+                                    <span id="ui-percentil">0%</span>
+                                </div>
+                                <div class="h-3 rounded-full bg-gray-100 dark:bg-cardAlt overflow-hidden">
+                                    <div id="ui-percentil-bar" class="h-full bg-brand rounded-full transition-all duration-500" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between text-sm font-bold mb-2">
+                                    <span>Avance de categoria</span>
+                                    <span id="ui-categoria-bar-label">0%</span>
+                                </div>
+                                <div class="h-3 rounded-full bg-gray-100 dark:bg-cardAlt overflow-hidden">
+                                    <div id="ui-categoria-bar" class="h-full bg-yellow-400 rounded-full transition-all duration-500" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <div class="grid sm:grid-cols-2 gap-3 pt-2">
+                                <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                                    <p class="text-xs uppercase font-bold text-gray-500">Gap lider</p>
+                                    <p id="ui-gap-lider" class="text-xl font-black mt-2 font-mono">--:--:--</p>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                                    <p class="text-xs uppercase font-bold text-gray-500">Gap podio cat</p>
+                                    <p id="ui-gap-podio" class="text-xl font-black mt-2 font-mono">--:--:--</p>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                                    <p class="text-xs uppercase font-bold text-gray-500">Mejor cat</p>
+                                    <p id="ui-mejor-cat" class="text-xl font-black mt-2 font-mono">--:--:--</p>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                                    <p class="text-xs uppercase font-bold text-gray-500">Promedio dist.</p>
+                                    <p id="ui-promedio-distancia" class="text-xl font-black mt-2 font-mono">--:--:--</p>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </div>
+
+            <section class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+                <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-xs uppercase tracking-[0.3em] text-brand font-bold mb-2">Mapa preliminar</p>
+                        <h3 class="text-2xl font-black uppercase">Ruta del atleta</h3>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-centrar-ruta" class="w-11 h-11 rounded-2xl bg-gray-100 dark:bg-cardAlt border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-brand hover:text-brand transition">
+                            <i class="fa-solid fa-expand"></i>
+                        </button>
+                        <button id="btn-centrar-atleta" class="w-11 h-11 rounded-2xl bg-gray-100 dark:bg-cardAlt border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-brand hover:text-brand transition">
+                            <i class="fa-solid fa-person-running"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden relative">
+                        <div id="mapa-atleta" class="h-[26rem] w-full"></div>
+                        <div id="mapa-overlay" class="absolute inset-0 flex items-center justify-center p-6 bg-gray-50/95 dark:bg-cardAlt/95 text-center">
+                            <div class="max-w-md">
+                                <div class="w-14 h-14 rounded-full bg-brand/15 text-brand flex items-center justify-center mx-auto mb-4">
+                                    <i class="fa-solid fa-map-location-dot text-2xl"></i>
+                                </div>
+                                <p class="text-lg font-black uppercase mb-2">Mapa en preparacion</p>
+                                <p id="mapa-overlay-text" class="text-sm text-gray-500 dark:text-gray-400">Cargando base de mapa y coordenadas del evento...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 grid md:grid-cols-3 gap-3">
+                        <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                            <p class="text-xs uppercase font-bold text-gray-500">Modo</p>
+                            <p id="mapa-modo" class="text-xl font-black mt-2">Preliminar</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                            <p class="text-xs uppercase font-bold text-gray-500">Puntos con coord.</p>
+                            <p id="mapa-puntos" class="text-xl font-black mt-2">0</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                            <p class="text-xs uppercase font-bold text-gray-500">Posicion atleta</p>
+                            <p id="mapa-posicion" class="text-xl font-black mt-2">No estimada</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="grid xl:grid-cols-[1.1fr_0.9fr] gap-6">
+                <article class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+                    <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
+                        <p class="text-xs uppercase tracking-[0.3em] text-brand font-bold mb-2">Ruta y parciales</p>
+                        <h3 class="text-2xl font-black uppercase">Puntos de control</h3>
+                    </div>
+                    <div class="p-6">
+                        <div id="timeline-empty" class="hidden bg-gray-50 dark:bg-cardAlt border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                            Este atleta no tiene puntos de control o tramos cargados en el JSON interno.
+                        </div>
+                        <div id="contenedor-linea-tiempo" class="space-y-4"></div>
+                        <div id="contenedor-tramos" class="hidden mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
+                            <div class="flex items-center justify-between gap-3 mb-4">
+                                <div>
+                                    <p class="text-xs uppercase tracking-[0.3em] text-yellow-500 font-bold mb-2">Segmentos</p>
+                                    <h4 class="text-xl font-black uppercase">Tiempos de tramo</h4>
+                                </div>
+                            </div>
+                            <div id="grid-tramos" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+                    <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
+                        <p class="text-xs uppercase tracking-[0.3em] text-brand font-bold mb-2">Legado local</p>
+                        <h3 class="text-2xl font-black uppercase">Historial del atleta</h3>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                Esta comparacion se arma con los eventos que ya fueron importados y guardados localmente en este navegador.
+                            </p>
+                        </div>
+                        <div id="legacy-summary" class="grid grid-cols-2 gap-3"></div>
+                        <div id="legacy-list" class="space-y-3 max-h-[28rem] overflow-y-auto custom-scrollbar pr-1"></div>
+                    </div>
+                </article>
+            </div>
+
+            <section class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+                <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
+                    <p class="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400 font-bold mb-2">Contexto competitivo</p>
+                    <h2 class="text-2xl font-black uppercase">Top de la distancia</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-100 dark:bg-gray-900 text-gray-500 uppercase text-[11px]">
+                            <tr>
+                                <th class="px-4 py-3 text-left">Pos</th>
+                                <th class="px-4 py-3 text-left">Dorsal</th>
+                                <th class="px-4 py-3 text-left">Atleta</th>
+                                <th class="px-4 py-3 text-left">Categoria</th>
+                                <th class="px-4 py-3 text-left">Pos Cat</th>
+                                <th class="px-4 py-3 text-left">Tiempo</th>
+                                <th class="px-4 py-3 text-left">Ritmo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-top" class="divide-y divide-gray-200 dark:divide-gray-800"></tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <div id="modal-diploma" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-4">
+        <div class="relative w-full max-w-4xl">
+            <button id="btn-cerrar-diploma" class="absolute -top-14 right-0 text-white/70 hover:text-white text-3xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+                <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-xs uppercase tracking-[0.3em] text-brand font-bold mb-2">Diploma</p>
+                        <h3 class="text-2xl font-black uppercase">Vista previa</h3>
+                    </div>
+                    <button id="btn-descargar-diploma" class="bg-yellow-400 hover:bg-yellow-300 text-black px-4 py-3 rounded-2xl text-sm font-black disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fa-solid fa-download mr-2"></i> Descargar
+                    </button>
+                </div>
+                <div class="p-6">
+                    <div id="diploma-loading" class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 min-h-[16rem] flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
+                        <i class="fa-solid fa-spinner fa-spin text-3xl mb-3 text-brand"></i>
+                        Generando diploma...
+                    </div>
+                    <div class="hidden" id="diploma-stage">
+                        <canvas id="canvas-diploma" class="w-full h-auto rounded-2xl border border-gray-200 dark:border-gray-800"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-reclamo" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 w-full max-w-lg p-6 relative">
+            <button id="btn-cerrar-reclamo" class="absolute top-5 right-5 text-gray-500 hover:text-gray-900 dark:hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <p class="text-xs uppercase tracking-[0.3em] text-red-500 font-bold mb-2">Reclamo express</p>
+            <h3 class="text-2xl font-black uppercase mb-4">Preparar mensaje</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                No hay backend para reclamos en esta version, asi que se genera un mensaje listo para WhatsApp o para copiar.
+            </p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs uppercase font-bold text-gray-500 mb-2">Motivo</label>
+                    <select id="reclamo-motivo" class="w-full bg-gray-50 dark:bg-cardAlt border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-red-400">
+                        <option value="Tiempo incorrecto">Tiempo incorrecto</option>
+                        <option value="Falta punto de control">Falta punto de control</option>
+                        <option value="Chip no registrado">Chip no registrado</option>
+                        <option value="Categoria o genero incorrecto">Categoria o genero incorrecto</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase font-bold text-gray-500 mb-2">Telefono de contacto</label>
+                    <input id="reclamo-telefono" type="tel" placeholder="3001234567" class="w-full bg-gray-50 dark:bg-cardAlt border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-red-400">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase font-bold text-gray-500 mb-2">Detalle</label>
+                    <textarea id="reclamo-texto" rows="4" placeholder="Describe brevemente lo que necesitas revisar..." class="w-full bg-gray-50 dark:bg-cardAlt border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-red-400"></textarea>
+                </div>
+                <div class="grid sm:grid-cols-2 gap-3 pt-2">
+                    <button id="btn-copiar-reclamo" class="bg-gray-100 dark:bg-cardAlt hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-900 dark:text-white py-3 rounded-2xl text-sm font-black transition">
+                        <i class="fa-solid fa-copy mr-2"></i> Copiar texto
+                    </button>
+                    <button id="btn-enviar-reclamo" class="bg-red-500 hover:bg-red-400 text-white py-3 rounded-2xl text-sm font-black transition">
+                        <i class="fa-brands fa-whatsapp mr-2"></i> Abrir WhatsApp
+                    </button>
+                </div>
+                <div id="reclamo-hint" class="hidden bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-700 dark:text-green-300 rounded-2xl px-4 py-3 text-sm"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./js/csvParser.js"></script>
+    <script src="./js/supabaseClient.js"></script>
+    <script src="./js/supabaseStore.js"></script>
+    <script src="./js/exportTools.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        let eventoActual = params.get('evento') || '';
+        let distanciaParam = params.get('distancia') || '';
+        let dorsalId = params.get('dorsal') || '';
+        let runtimeBundle = null;
+        let atletaActual = null;
+        let rankingRowsActual = [];
+        let timelineRowsActual = [];
+        let athleteMap = null;
+        let mapRouteBounds = null;
+        let athleteMapMarker = null;
+        let mapRouteEdgePoints = null;
+
+        const ui = {
+            loading: document.getElementById('estado-cargando'),
+            tituloEvento: document.getElementById('titulo-evento'),
+            subtituloEvento: document.getElementById('subtitulo-evento'),
+            btnVolver: document.getElementById('btn-volver'),
+            estadoError: document.getElementById('estado-error'),
+            errorTexto: document.getElementById('error-texto'),
+            contenido: document.getElementById('contenido-atleta'),
+            avisoExtraoficial: document.getElementById('aviso-extraoficial'),
+            estadoCarrera: document.getElementById('ui-estado-carrera'),
+            distanciaCat: document.getElementById('ui-distancia-cat'),
+            iconoGenero: document.getElementById('ui-icono-genero'),
+            nombre: document.getElementById('ui-nombre'),
+            meta: document.getElementById('ui-meta'),
+            badgeDorsal: document.getElementById('ui-badge-dorsal'),
+            badgeGenero: document.getElementById('ui-badge-genero'),
+            badgePais: document.getElementById('ui-badge-pais'),
+            badgeCategoria: document.getElementById('ui-badge-categoria'),
+            tiempo: document.getElementById('ui-tiempo'),
+            tiempoChip: document.getElementById('ui-tiempo-chip'),
+            ritmo: document.getElementById('ui-ritmo'),
+            posiciones: document.getElementById('ui-posiciones'),
+            statsGrid: document.getElementById('stats-grid'),
+            percentil: document.getElementById('ui-percentil'),
+            percentilBar: document.getElementById('ui-percentil-bar'),
+            categoriaBar: document.getElementById('ui-categoria-bar'),
+            categoriaBarLabel: document.getElementById('ui-categoria-bar-label'),
+            gapLider: document.getElementById('ui-gap-lider'),
+            gapPodio: document.getElementById('ui-gap-podio'),
+            mejorCat: document.getElementById('ui-mejor-cat'),
+            promedioDistancia: document.getElementById('ui-promedio-distancia'),
+            timelineEmpty: document.getElementById('timeline-empty'),
+            timeline: document.getElementById('contenedor-linea-tiempo'),
+            contenedorTramos: document.getElementById('contenedor-tramos'),
+            gridTramos: document.getElementById('grid-tramos'),
+            mapa: document.getElementById('mapa-atleta'),
+            mapaOverlay: document.getElementById('mapa-overlay'),
+            mapaOverlayText: document.getElementById('mapa-overlay-text'),
+            mapaModo: document.getElementById('mapa-modo'),
+            mapaPuntos: document.getElementById('mapa-puntos'),
+            mapaPosicion: document.getElementById('mapa-posicion'),
+            btnCentrarRuta: document.getElementById('btn-centrar-ruta'),
+            btnCentrarAtleta: document.getElementById('btn-centrar-atleta'),
+            legacySummary: document.getElementById('legacy-summary'),
+            legacyList: document.getElementById('legacy-list'),
+            tablaTop: document.getElementById('tabla-top'),
+            btnCompartir: document.getElementById('btn-compartir'),
+            btnPdfAtleta: document.getElementById('btn-pdf-atleta'),
+            btnDiploma: document.getElementById('btn-diploma'),
+            btnChuspic: document.getElementById('btn-chuspic'),
+            btnReclamo: document.getElementById('btn-reclamo'),
+            modalDiploma: document.getElementById('modal-diploma'),
+            btnCerrarDiploma: document.getElementById('btn-cerrar-diploma'),
+            btnDescargarDiploma: document.getElementById('btn-descargar-diploma'),
+            diplomaLoading: document.getElementById('diploma-loading'),
+            diplomaStage: document.getElementById('diploma-stage'),
+            canvasDiploma: document.getElementById('canvas-diploma'),
+            modalReclamo: document.getElementById('modal-reclamo'),
+            btnCerrarReclamo: document.getElementById('btn-cerrar-reclamo'),
+            reclamoMotivo: document.getElementById('reclamo-motivo'),
+            reclamoTelefono: document.getElementById('reclamo-telefono'),
+            reclamoTexto: document.getElementById('reclamo-texto'),
+            btnCopiarReclamo: document.getElementById('btn-copiar-reclamo'),
+            btnEnviarReclamo: document.getElementById('btn-enviar-reclamo'),
+            reclamoHint: document.getElementById('reclamo-hint'),
+            themeToggle: document.getElementById('theme-toggle'),
+            themeToggleDarkIcon: document.getElementById('theme-toggle-dark-icon'),
+            themeToggleLightIcon: document.getElementById('theme-toggle-light-icon')
+        };
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function syncThemeIcons() {
+            if (document.documentElement.classList.contains('dark')) {
+                ui.themeToggleLightIcon.classList.remove('hidden');
+                ui.themeToggleDarkIcon.classList.add('hidden');
+            } else {
+                ui.themeToggleDarkIcon.classList.remove('hidden');
+                ui.themeToggleLightIcon.classList.add('hidden');
+            }
+        }
+
+        ui.themeToggle.addEventListener('click', function() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+            syncThemeIcons();
+        });
+        syncThemeIcons();
+
+        function validSeconds(value) {
+            const seconds = YairStore.timeToSortableSeconds(value);
+            return Number.isFinite(seconds) ? seconds : Number.POSITIVE_INFINITY;
+        }
+
+        function isFinishedTime(value) {
+            return Number.isFinite(validSeconds(value));
+        }
+
+        function average(values) {
+            if (!values.length) return null;
+            return values.reduce(function(total, value) { return total + value; }, 0) / values.length;
+        }
+
+        function formatGap(seconds) {
+            if (!Number.isFinite(seconds) || seconds <= 0) return '00:00:00';
+            return YairStore.secondsToRaceTime(Math.round(seconds));
+        }
+
+        function formatDateLabel(raw) {
+            if (!raw) return '';
+            const date = new Date(raw.length <= 10 ? raw + 'T12:00:00' : raw);
+            if (Number.isNaN(date.getTime())) return raw;
+            return date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function normalizeIdentity(value) {
+            return String(value || '')
+                .trim()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/\s+/g, ' ');
+        }
+
+        function sortDistanceLabels(values) {
+            return (values || []).slice().sort(function(a, b) {
+                return String(a || '').localeCompare(String(b || ''), undefined, { numeric: true, sensitivity: 'base' });
+            });
+        }
+
+        function isFiniteCoordinate(value) {
+            const num = Number(value);
+            return Number.isFinite(num);
+        }
+
+        function parseCoordinateString(value) {
+            const parts = String(value || '').split(',').map(function(item) {
+                return Number(String(item).trim());
+            });
+            if (parts.length < 2 || !parts.every(Number.isFinite)) return null;
+            if (Math.abs(parts[0]) <= 90 && Math.abs(parts[1]) <= 180) return [parts[0], parts[1]];
+            if (Math.abs(parts[1]) <= 90 && Math.abs(parts[0]) <= 180) return [parts[1], parts[0]];
+            return null;
+        }
+
+        function toLatLng(raw) {
+            if (!raw || typeof raw !== 'object') return null;
+
+            if (isFiniteCoordinate(raw.lat) && isFiniteCoordinate(raw.lng)) {
+                return [Number(raw.lat), Number(raw.lng)];
+            }
+            if (isFiniteCoordinate(raw.lat) && isFiniteCoordinate(raw.lon)) {
+                return [Number(raw.lat), Number(raw.lon)];
+            }
+            if (isFiniteCoordinate(raw.latitude) && isFiniteCoordinate(raw.longitude)) {
+                return [Number(raw.latitude), Number(raw.longitude)];
+            }
+            if (typeof raw.coords === 'string') {
+                return parseCoordinateString(raw.coords);
+            }
+            if (typeof raw.coord === 'string') {
+                return parseCoordinateString(raw.coord);
+            }
+
+            const candidates = [
+                raw.coordinates,
+                raw.coord,
+                raw.coords,
+                raw.geometry && raw.geometry.coordinates
+            ];
+
+            for (let i = 0; i < candidates.length; i += 1) {
+                const candidate = candidates[i];
+                if (Array.isArray(candidate) && candidate.length >= 2) {
+                    const a = Number(candidate[0]);
+                    const b = Number(candidate[1]);
+                    if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
+                    if (Math.abs(a) <= 90 && Math.abs(b) <= 180) return [a, b];
+                    if (Math.abs(b) <= 90 && Math.abs(a) <= 180) return [b, a];
+                }
+            }
+
+            return null;
+        }
+
+        function computeRankingRows(bucket) {
+            const atletas = Object.keys(bucket || {}).map(function(dorsalKey) {
+                return Object.assign({ dorsal: dorsalKey }, bucket[dorsalKey]);
+            }).sort(function(a, b) {
+                return validSeconds(a.tiempo_oficial) - validSeconds(b.tiempo_oficial);
+            });
+
+            const posGenero = {};
+            const posCategoria = {};
+
+            atletas.forEach(function(atleta, index) {
+                const genero = atleta.genero || '-';
+                const categoria = atleta.categoria || 'General';
+                posGenero[genero] = (posGenero[genero] || 0) + 1;
+                posCategoria[categoria] = (posCategoria[categoria] || 0) + 1;
+                if (atleta.posGral == null) atleta.posGral = index + 1;
+                if (atleta.posGenero == null) atleta.posGenero = posGenero[genero];
+                if (atleta.posCategoria == null) atleta.posCategoria = posCategoria[categoria];
+            });
+
+            return atletas;
+        }
+
+        function buildStatCard(label, value, tone, help) {
+            return `
+                <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                    <p class="text-xs uppercase font-bold text-gray-500">${escapeHtml(label)}</p>
+                    <p class="text-2xl font-black mt-2 ${tone || ''}">${escapeHtml(value)}</p>
+                    ${help ? `<p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">${escapeHtml(help)}</p>` : ''}
+                </div>
+            `;
+        }
+
+        function renderError(message) {
+            ui.loading.classList.add('hidden');
+            ui.contenido.classList.add('hidden');
+            ui.estadoError.classList.remove('hidden');
+            ui.errorTexto.textContent = message;
+        }
+
+        function hideLoading() {
+            ui.loading.classList.add('hidden');
+        }
+
+        function getAthleteStatus(atleta) {
+            const hasOfficial = isFinishedTime(atleta.tiempo_oficial);
+            const hasControl = Object.values(atleta.puntos_control || {}).some(function(value) {
+                return isFinishedTime(value);
+            });
+            const rawOfficial = String(atleta.tiempo_oficial || '').toUpperCase();
+
+            if (rawOfficial === 'DNF' || rawOfficial === 'DNS' || rawOfficial === 'DSQ' || rawOfficial === 'DQ' || rawOfficial === 'RET') {
+                return {
+                    label: rawOfficial,
+                    className: 'inline-flex items-center gap-2 px-3 py-2 rounded-full text-[10px] uppercase tracking-[0.24em] font-black border bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-300 border-red-200 dark:border-red-500/20'
+                };
+            }
+
+            if (hasOfficial) {
+                return {
+                    label: 'Finalizado',
+                    className: 'inline-flex items-center gap-2 px-3 py-2 rounded-full text-[10px] uppercase tracking-[0.24em] font-black border bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-300 border-green-200 dark:border-green-500/20'
+                };
+            }
+
+            if (hasControl) {
+                return {
+                    label: 'En ruta',
+                    className: 'inline-flex items-center gap-2 px-3 py-2 rounded-full text-[10px] uppercase tracking-[0.24em] font-black border bg-blue-50 dark:bg-brand/10 text-brand border-blue-200 dark:border-brand/20'
+                };
+            }
+
+            return {
+                label: 'Sin tiempo',
+                className: 'inline-flex items-center gap-2 px-3 py-2 rounded-full text-[10px] uppercase tracking-[0.24em] font-black border bg-gray-100 dark:bg-cardAlt text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-700'
+            };
+        }
+
+        function getRoutePoints(bundle, distance, puntosControl) {
+            const rutas = (bundle && bundle.config && bundle.config.rutas_utmb) || {};
+            const puntosRuta = (bundle && bundle.config && bundle.config.puntos_ruta) || {};
+            const rawPoints = rutas[distance] || puntosRuta[distance] || [];
+
+            function mapPoint(rawPoint, index) {
+                if (typeof rawPoint === 'string') {
+                    return { nombre: rawPoint, km: index + 1, latlng: null };
+                }
+                const point = rawPoint || {};
+                return {
+                    nombre: point.nombre || point.name || point.label || point.punto || `Punto ${index + 1}`,
+                    km: Number(point.km != null ? point.km : point.distancia_km != null ? point.distancia_km : index + 1),
+                    latlng: toLatLng(point)
+                };
+            }
+
+            let points = Array.isArray(rawPoints)
+                ? rawPoints.map(mapPoint)
+                : Object.keys(rawPoints || {}).map(function(key, index) {
+                    const point = rawPoints[key];
+                    return mapPoint(Object.assign({ nombre: key }, point), index);
+                });
+
+            if (!points.length && puntosControl && Object.keys(puntosControl).length) {
+                points = Object.keys(puntosControl).map(function(key, index) {
+                    return { nombre: key, km: index + 1 };
+                });
+            }
+
+            return points.map(function(point, index) {
+                return {
+                    nombre: point.nombre,
+                    km: Number.isFinite(point.km) ? point.km : index + 1,
+                    latlng: point.latlng || null
+                };
+            }).sort(function(a, b) {
+                return a.km - b.km;
+            });
+        }
+
+        function getMapSourceUrl(bundle, distance) {
+            const config = (bundle && bundle.config) || {};
+            const mapas = config.mapas || {};
+            return mapas[distance] || config.geojson_url || '';
+        }
+
+        function initAthleteMap() {
+            if (athleteMap || typeof window.L === 'undefined') return athleteMap;
+            athleteMap = L.map(ui.mapa, {
+                zoomControl: false,
+                attributionControl: true
+            }).setView([4.5709, -74.2973], 5);
+
+            L.control.zoom({ position: 'bottomright' }).addTo(athleteMap);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(athleteMap);
+
+            return athleteMap;
+        }
+
+        function setMapOverlay(text, visible) {
+            ui.mapaOverlayText.textContent = text;
+            ui.mapaOverlay.classList.toggle('hidden', !visible);
+        }
+
+        function clearMapLayers() {
+            if (!athleteMap) return;
+            athleteMap.eachLayer(function(layer) {
+                if (layer instanceof L.TileLayer) return;
+                athleteMap.removeLayer(layer);
+            });
+            mapRouteBounds = null;
+            athleteMapMarker = null;
+            mapRouteEdgePoints = null;
+        }
+
+        function fitMapToBounds() {
+            if (athleteMap && mapRouteBounds && mapRouteBounds.isValid()) {
+                athleteMap.fitBounds(mapRouteBounds, { padding: [30, 30] });
+            }
+        }
+
+        function getAthleteMapPosition(routePoints, timelineRows, atleta) {
+            const finishedPointNames = timelineRows.filter(function(row) {
+                return row.finished;
+            }).map(function(row) {
+                return normalizeIdentity(row.nombre);
+            });
+
+            if (finishedPointNames.length) {
+                for (let i = routePoints.length - 1; i >= 0; i -= 1) {
+                    const point = routePoints[i];
+                    if (point.latlng && finishedPointNames.indexOf(normalizeIdentity(point.nombre)) !== -1) {
+                        return {
+                            latlng: point.latlng,
+                            label: `${point.nombre} | Km ${point.km.toFixed(1)}`
+                        };
+                    }
+                }
+            }
+
+            if (isFinishedTime(atleta.tiempo_oficial)) {
+                const lastPoint = routePoints.filter(function(point) { return point.latlng; }).slice(-1)[0];
+                if (lastPoint) {
+                    return {
+                        latlng: lastPoint.latlng,
+                        label: `Meta estimada | Km ${lastPoint.km.toFixed(1)}`
+                    };
+                }
+                if (mapRouteEdgePoints && Array.isArray(mapRouteEdgePoints.end)) {
+                    return {
+                        latlng: mapRouteEdgePoints.end,
+                        label: 'Meta estimada | GeoJSON'
+                    };
+                }
+            }
+
+            return null;
+        }
+
+        function buildFallbackGeoJsonPoints(routePoints) {
+            return routePoints.filter(function(point) {
+                return Array.isArray(point.latlng);
+            }).map(function(point) {
+                return {
+                    nombre: point.nombre,
+                    km: point.km,
+                    latlng: point.latlng
+                };
+            });
+        }
+
+        function flattenGeoJsonLatLngs(coordinates, bucket) {
+            if (!Array.isArray(coordinates) || !coordinates.length) return;
+            if (typeof coordinates[0] === 'number' && typeof coordinates[1] === 'number') {
+                const a = Number(coordinates[0]);
+                const b = Number(coordinates[1]);
+                if (!Number.isFinite(a) || !Number.isFinite(b)) return;
+                if (Math.abs(a) <= 90 && Math.abs(b) <= 180) {
+                    bucket.push([a, b]);
+                    return;
+                }
+                if (Math.abs(b) <= 90 && Math.abs(a) <= 180) {
+                    bucket.push([b, a]);
+                }
+                return;
+            }
+            coordinates.forEach(function(item) {
+                flattenGeoJsonLatLngs(item, bucket);
+            });
+        }
+
+        function getGeoJsonEdgePoints(geojson) {
+            const latlngs = [];
+            if (geojson && geojson.type === 'FeatureCollection' && Array.isArray(geojson.features)) {
+                geojson.features.forEach(function(feature) {
+                    if (feature && feature.geometry) {
+                        flattenGeoJsonLatLngs(feature.geometry.coordinates, latlngs);
+                    }
+                });
+            } else if (geojson && geojson.type === 'Feature' && geojson.geometry) {
+                flattenGeoJsonLatLngs(geojson.geometry.coordinates, latlngs);
+            } else if (geojson && geojson.coordinates) {
+                flattenGeoJsonLatLngs(geojson.coordinates, latlngs);
+            }
+
+            if (!latlngs.length) return null;
+            return {
+                start: latlngs[0],
+                end: latlngs[latlngs.length - 1]
+            };
+        }
+
+        async function fetchGeoJson(url) {
+            if (!url) return null;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) return null;
+                return await response.json();
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function addGeoJsonRouteToMap(geojson) {
+            if (!athleteMap || !geojson || typeof window.L === 'undefined') return false;
+            const layer = L.geoJSON(geojson, {
+                style: function() {
+                    return {
+                        color: '#00CFFF',
+                        weight: 4,
+                        opacity: 0.9
+                    };
+                },
+                pointToLayer: function(feature, latlng) {
+                    return L.circleMarker(latlng, {
+                        radius: 5,
+                        color: '#ffffff',
+                        weight: 2,
+                        fillColor: '#00CFFF',
+                        fillOpacity: 1
+                    });
+                }
+            }).addTo(athleteMap);
+            mapRouteBounds = layer.getBounds();
+            mapRouteEdgePoints = getGeoJsonEdgePoints(geojson);
+            return mapRouteBounds && mapRouteBounds.isValid();
+        }
+
+        function addPointRouteToMap(routePoints) {
+            if (!athleteMap || typeof window.L === 'undefined') return false;
+            const mapped = buildFallbackGeoJsonPoints(routePoints);
+            if (!mapped.length) return false;
+
+            const latlngs = mapped.map(function(item) { return item.latlng; });
+            if (latlngs.length >= 2) {
+                L.polyline(latlngs, {
+                    color: '#00CFFF',
+                    weight: 4,
+                    opacity: 0.85
+                }).addTo(athleteMap);
+            }
+
+            mapped.forEach(function(item, index) {
+                const marker = L.circleMarker(item.latlng, {
+                    radius: index === mapped.length - 1 ? 6 : 5,
+                    color: '#ffffff',
+                    weight: 2,
+                    fillColor: '#00CFFF',
+                    fillOpacity: 1
+                }).addTo(athleteMap);
+                marker.bindPopup(`<div><strong>${escapeHtml(item.nombre)}</strong><br>Km ${escapeHtml(item.km.toFixed(1))}</div>`);
+            });
+
+            mapRouteBounds = L.latLngBounds(latlngs);
+            return mapRouteBounds.isValid();
+        }
+
+        async function renderMapModule(atleta, bundle, distance, timelineRows) {
+            ui.mapaModo.textContent = 'Preliminar';
+            ui.mapaPuntos.textContent = '0';
+            ui.mapaPosicion.textContent = 'No estimada';
+
+            if (typeof window.L === 'undefined') {
+                setMapOverlay('No fue posible cargar la libreria del mapa en esta sesion.', true);
+                return;
+            }
+
+            initAthleteMap();
+            setMapOverlay('Buscando coordenadas del evento y puntos de control...', true);
+            clearMapLayers();
+
+            const routePoints = getRoutePoints(bundle, distance, atleta.puntos_control || {});
+            const pointsWithCoords = routePoints.filter(function(point) {
+                return Array.isArray(point.latlng);
+            });
+            ui.mapaPuntos.textContent = String(pointsWithCoords.length);
+
+            const geoJsonUrl = getMapSourceUrl(bundle, distance);
+            let hasRoute = false;
+            let modeLabel = 'Base + fallback';
+
+            if (geoJsonUrl) {
+                const geojson = await fetchGeoJson(geoJsonUrl);
+                if (geojson) {
+                    hasRoute = addGeoJsonRouteToMap(geojson);
+                    if (hasRoute) {
+                        modeLabel = 'GeoJSON';
+                    }
+                }
+            }
+
+            if (!hasRoute && pointsWithCoords.length) {
+                hasRoute = addPointRouteToMap(routePoints);
+                if (hasRoute) {
+                    modeLabel = pointsWithCoords.length >= 2 ? 'Puntos enlazados' : 'Un solo punto';
+                }
+            }
+
+            const athletePosition = getAthleteMapPosition(routePoints, timelineRows, atleta);
+            if (athletePosition && athleteMap) {
+                athleteMapMarker = L.marker(athletePosition.latlng).addTo(athleteMap);
+                athleteMapMarker.bindPopup(`<div><strong>${escapeHtml(atleta.nombre)}</strong><br>${escapeHtml(athletePosition.label)}</div>`);
+                ui.mapaPosicion.textContent = athletePosition.label;
+                if (!hasRoute) {
+                    mapRouteBounds = L.latLngBounds([athletePosition.latlng]);
+                } else if (mapRouteBounds && mapRouteBounds.isValid()) {
+                    mapRouteBounds.extend(athletePosition.latlng);
+                }
+            }
+
+            if (hasRoute) {
+                fitMapToBounds();
+                setMapOverlay('Mapa preliminar cargado con los datos locales del evento.', false);
+            } else if (athletePosition && athleteMap) {
+                athleteMap.setView(athletePosition.latlng, 13);
+                setMapOverlay('No hay ruta completa, pero ubicamos una posicion aproximada del atleta segun los puntos con coordenadas.', false);
+                modeLabel = 'Posicion parcial';
+            } else {
+                athleteMap.setView([4.5709, -74.2973], 5);
+                setMapOverlay('Este evento todavia no tiene coordenadas suficientes para dibujar una ruta real. El modulo queda listo para usar en cuanto cargues puntos con lat/lng o un GeoJSON.', true);
+                modeLabel = 'Sin geometria';
+            }
+
+            ui.mapaModo.textContent = modeLabel;
+            setTimeout(function() {
+                if (athleteMap) athleteMap.invalidateSize();
+            }, 60);
+        }
+
+        function buildTimelineRows(atleta, bundle, distance) {
+            const puntosControl = atleta.puntos_control || {};
+            const normalizedControlMap = {};
+            Object.keys(puntosControl).forEach(function(key) {
+                normalizedControlMap[normalizeIdentity(key)] = puntosControl[key];
+            });
+
+            const routePoints = getRoutePoints(bundle, distance, puntosControl);
+            if (!routePoints.length) return [];
+
+            let lastTimeSeconds = 0;
+            let lastKm = 0;
+
+            return routePoints.map(function(point, index) {
+                const exactTime = puntosControl[point.nombre];
+                const matchedTime = exactTime || normalizedControlMap[normalizeIdentity(point.nombre)] || '';
+                const finished = isFinishedTime(matchedTime);
+                let split = '--:--';
+
+                if (finished) {
+                    const currentSeconds = validSeconds(matchedTime);
+                    const kmDelta = Math.max(point.km - lastKm, 0);
+                    const timeDelta = currentSeconds - lastTimeSeconds;
+                    if (index === 0) {
+                        split = 'Salida';
+                    } else if (kmDelta > 0 && timeDelta > 0) {
+                        split = YairStore.secondsToPace(Math.round(timeDelta / kmDelta));
+                    }
+                    lastTimeSeconds = currentSeconds;
+                    lastKm = point.km;
+                }
+
+                return {
+                    nombre: point.nombre,
+                    km: point.km,
+                    tiempo: matchedTime || '--:--:--',
+                    split: split,
+                    finished: finished
+                };
+            });
+        }
+
+        function renderTimeline(atleta, bundle, distance) {
+            const rows = buildTimelineRows(atleta, bundle, distance);
+            const tramoKeys = Object.keys(atleta.tramos || {});
+            const hasTimeline = rows.length > 0;
+            const hasTramos = tramoKeys.length > 0;
+
+            if (!hasTimeline && !hasTramos) {
+                ui.timelineEmpty.classList.remove('hidden');
+                ui.timeline.innerHTML = '';
+                ui.contenedorTramos.classList.add('hidden');
+                ui.gridTramos.innerHTML = '';
+                return rows;
+            }
+
+            ui.timelineEmpty.classList.add('hidden');
+            ui.timeline.innerHTML = rows.map(function(row, index) {
+                const markerClasses = row.finished
+                    ? 'bg-brand text-dark border-brand shadow-lg shadow-brand/20'
+                    : 'bg-white dark:bg-cardAlt text-gray-400 border-gray-300 dark:border-gray-700';
+                const lineClasses = row.finished
+                    ? 'border-brand/60'
+                    : 'border-gray-200 dark:border-gray-700';
+
+                return `
+                    <div class="relative flex gap-4">
+                        ${index < rows.length - 1 ? `<div class="absolute left-[0.8rem] top-8 h-[calc(100%+1rem)] border-l-2 ${lineClasses}"></div>` : ''}
+                        <div class="w-7 h-7 rounded-full border-2 ${markerClasses} flex items-center justify-center text-[10px] font-black shrink-0 mt-1">
+                            <i class="fa-solid ${row.finished ? 'fa-check' : 'fa-location-dot'}"></i>
+                        </div>
+                        <div class="flex-1 pb-5">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div>
+                                    <p class="font-black uppercase text-sm">${escapeHtml(row.nombre)}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Km ${escapeHtml(row.km.toFixed(1))}</p>
+                                </div>
+                                <div class="text-left sm:text-right">
+                                    <p class="font-mono text-lg font-black ${row.finished ? 'text-brand' : 'text-gray-400'}">${escapeHtml(row.tiempo)}</p>
+                                    <p class="text-[11px] text-gray-500 dark:text-gray-400">${row.finished ? `Split ${escapeHtml(row.split)}` : 'Pendiente'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (!hasTramos) {
+                ui.contenedorTramos.classList.add('hidden');
+                ui.gridTramos.innerHTML = '';
+                return rows;
+            }
+
+            ui.contenedorTramos.classList.remove('hidden');
+            const tramosConfig = (((bundle || {}).config || {}).tramos_utmb || {})[distance];
+            const tramoMeta = Array.isArray(tramosConfig) ? tramosConfig : [];
+            ui.gridTramos.innerHTML = tramoKeys.map(function(key) {
+                const meta = tramoMeta.find(function(item) {
+                    return String(item.id_wiclax || item.id || item.nombre_publico || '').toLowerCase() === String(key).toLowerCase();
+                }) || {};
+                const label = meta.nombre_publico || meta.nombre || key;
+                const value = atleta.tramos[key];
+                return `
+                    <div class="bg-yellow-50 dark:bg-cardAlt rounded-2xl border border-yellow-200 dark:border-yellow-500/20 p-4">
+                        <p class="text-[11px] uppercase tracking-[0.2em] text-yellow-600 dark:text-yellow-300 font-bold mb-2">${escapeHtml(label)}</p>
+                        <p class="text-xl font-black font-mono">${escapeHtml(value || '--:--:--')}</p>
+                    </div>
+                `;
+            }).join('');
+            return rows;
+        }
+
+        function renderTopTable(rankingRows, currentDorsal) {
+            ui.tablaTop.innerHTML = rankingRows.slice(0, 12).map(function(item) {
+                const highlight = String(item.dorsal) === String(currentDorsal);
+                return `
+                    <tr class="${highlight ? 'bg-brand/10' : 'hover:bg-gray-50 dark:hover:bg-gray-900/40'} cursor-pointer transition" onclick="window.location.href='atleta.html?evento=${encodeURIComponent(eventoActual)}&distancia=${encodeURIComponent(distanciaParam)}&dorsal=${encodeURIComponent(item.dorsal)}'">
+                        <td class="px-4 py-3 font-black text-brand">${escapeHtml(item.posGral)}</td>
+                        <td class="px-4 py-3 font-mono">#${escapeHtml(item.dorsal)}</td>
+                        <td class="px-4 py-3">
+                            <p class="font-bold">${escapeHtml(item.nombre)}</p>
+                            <p class="text-xs text-gray-500">${escapeHtml(item.genero || '-')}</p>
+                        </td>
+                        <td class="px-4 py-3">${escapeHtml(item.categoria || 'General')}</td>
+                        <td class="px-4 py-3">${escapeHtml(item.posCategoria != null ? item.posCategoria : '-')}</td>
+                        <td class="px-4 py-3 font-mono font-bold">${escapeHtml(item.tiempo_oficial || '--:--:--')}</td>
+                        <td class="px-4 py-3 font-mono">${escapeHtml(item.ritmo || '--:--')}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderPerformance(atleta, atletaRanking, rankingRows) {
+            const finishedRows = rankingRows.filter(function(item) {
+                return isFinishedTime(item.tiempo_oficial);
+            });
+            const sameCategory = finishedRows.filter(function(item) {
+                return (item.categoria || 'General') === (atleta.categoria || 'General');
+            });
+            const athleteSeconds = validSeconds(atleta.tiempo_oficial);
+            const leaderSeconds = finishedRows.length ? validSeconds(finishedRows[0].tiempo_oficial) : Number.POSITIVE_INFINITY;
+            const categoryBestSeconds = sameCategory.length ? validSeconds(sameCategory[0].tiempo_oficial) : Number.POSITIVE_INFINITY;
+            const categoryPodiumSeconds = sameCategory.length >= 3 ? validSeconds(sameCategory[2].tiempo_oficial) : categoryBestSeconds;
+            const averageSeconds = average(finishedRows.map(function(item) { return validSeconds(item.tiempo_oficial); }));
+            const percentil = finishedRows.length && atletaRanking.posGral
+                ? Math.max(0, Math.min(100, Math.round(((finishedRows.length - atletaRanking.posGral) / finishedRows.length) * 100)))
+                : 0;
+            const categoryPercent = sameCategory.length && atletaRanking.posCategoria
+                ? Math.max(0, Math.min(100, Math.round(((sameCategory.length - atletaRanking.posCategoria) / sameCategory.length) * 100)))
+                : 0;
+            const womenCount = rankingRows.filter(function(item) { return item.genero === 'F'; }).length;
+            const categoriesCount = Array.from(new Set(rankingRows.map(function(item) { return item.categoria || 'General'; }))).length;
+
+            ui.statsGrid.innerHTML = [
+                buildStatCard('Atletas', rankingRows.length, 'text-brand', `${womenCount} mujeres`),
+                buildStatCard('Llegados', finishedRows.length, 'text-green-500', `${categoriesCount} categorias`),
+                buildStatCard('Pos general', atletaRanking.posGral || '-', '', 'Sobre la clasificacion actual'),
+                buildStatCard('Pos categoria', atletaRanking.posCategoria || '-', 'text-yellow-500', atleta.categoria || 'General'),
+                buildStatCard('Pos genero', atletaRanking.posGenero || '-', '', atleta.genero || '-'),
+                buildStatCard('Percentil', `${percentil}%`, 'text-brand', 'Mejor que este porcentaje del field')
+            ].join('');
+
+            ui.percentil.textContent = `${percentil}%`;
+            ui.percentilBar.style.width = `${percentil}%`;
+            ui.categoriaBarLabel.textContent = `${categoryPercent}%`;
+            ui.categoriaBar.style.width = `${categoryPercent}%`;
+            ui.gapLider.textContent = Number.isFinite(athleteSeconds) && Number.isFinite(leaderSeconds)
+                ? formatGap(Math.max(athleteSeconds - leaderSeconds, 0))
+                : '--:--:--';
+            ui.gapPodio.textContent = Number.isFinite(athleteSeconds) && Number.isFinite(categoryPodiumSeconds)
+                ? formatGap(Math.max(athleteSeconds - categoryPodiumSeconds, 0))
+                : '--:--:--';
+            ui.mejorCat.textContent = Number.isFinite(categoryBestSeconds)
+                ? YairStore.secondsToRaceTime(Math.round(categoryBestSeconds))
+                : '--:--:--';
+            ui.promedioDistancia.textContent = Number.isFinite(averageSeconds)
+                ? YairStore.secondsToRaceTime(Math.round(averageSeconds))
+                : '--:--:--';
+        }
+
+        function computeAthletePdfStats() {
+            const finishedRows = rankingRowsActual.filter(function(item) {
+                return isFinishedTime(item.tiempo_oficial);
+            });
+            const sameCategory = finishedRows.filter(function(item) {
+                return (item.categoria || 'General') === (atletaActual.categoria || 'General');
+            });
+            const athleteSeconds = validSeconds(atletaActual.tiempo_oficial);
+            const leaderSeconds = finishedRows.length ? validSeconds(finishedRows[0].tiempo_oficial) : Number.POSITIVE_INFINITY;
+            const categoryBestSeconds = sameCategory.length ? validSeconds(sameCategory[0].tiempo_oficial) : Number.POSITIVE_INFINITY;
+            const categoryPodiumSeconds = sameCategory.length >= 3 ? validSeconds(sameCategory[2].tiempo_oficial) : categoryBestSeconds;
+            const averageSeconds = average(finishedRows.map(function(item) { return validSeconds(item.tiempo_oficial); }));
+            const percentile = finishedRows.length && atletaActual.posGral
+                ? Math.max(0, Math.min(100, Math.round(((finishedRows.length - atletaActual.posGral) / finishedRows.length) * 100)))
+                : 0;
+            const categoryPercent = sameCategory.length && atletaActual.posCategoria
+                ? Math.max(0, Math.min(100, Math.round(((sameCategory.length - atletaActual.posCategoria) / sameCategory.length) * 100)))
+                : 0;
+
+            return {
+                finishedRows: finishedRows,
+                percentile: percentile,
+                categoryPercent: categoryPercent,
+                gapLeader: Number.isFinite(athleteSeconds) && Number.isFinite(leaderSeconds)
+                    ? formatGap(Math.max(athleteSeconds - leaderSeconds, 0))
+                    : '--:--:--',
+                gapPodium: Number.isFinite(athleteSeconds) && Number.isFinite(categoryPodiumSeconds)
+                    ? formatGap(Math.max(athleteSeconds - categoryPodiumSeconds, 0))
+                    : '--:--:--',
+                categoryBest: Number.isFinite(categoryBestSeconds)
+                    ? YairStore.secondsToRaceTime(Math.round(categoryBestSeconds))
+                    : '--:--:--',
+                averageDistance: Number.isFinite(averageSeconds)
+                    ? YairStore.secondsToRaceTime(Math.round(averageSeconds))
+                    : '--:--:--'
+            };
+        }
+
+        function buildAthletePdfRanking() {
+            const preview = rankingRowsActual.slice(0, 5);
+            const isCurrentInPreview = preview.some(function(item) {
+                return String(item.dorsal) === String(atletaActual.dorsal);
+            });
+
+            if (!isCurrentInPreview) {
+                preview.push(atletaActual);
+            }
+
+            return preview.map(function(item) {
+                return {
+                    pos: item.posGral || '-',
+                    bib: item.dorsal || '-',
+                    name: item.nombre || 'Atleta',
+                    category: item.categoria || 'General',
+                    time: item.tiempo_oficial || '--:--:--',
+                    current: String(item.dorsal) === String(atletaActual.dorsal)
+                };
+            });
+        }
+
+        function buildAthletePdfTimeline() {
+            return (timelineRowsActual || []).map(function(row) {
+                const km = Number(row.km);
+                return {
+                    name: row.nombre || 'Punto',
+                    km: Number.isFinite(km) ? km.toFixed(1) : '-',
+                    time: row.tiempo || '--:--:--',
+                    split: row.split || '--:--',
+                    finished: !!row.finished
+                };
+            });
+        }
+
+        function buildAthletePdfReport() {
+            const stats = computeAthletePdfStats();
+            const status = getAthleteStatus(atletaActual);
+            const eventDate = formatDateLabel((runtimeBundle.config && runtimeBundle.config.fecha) || '');
+            const totalRows = rankingRowsActual.length || stats.finishedRows.length || 0;
+            const narrative = [
+                `${atletaActual.nombre || 'El atleta'} registra el dorsal #${atletaActual.dorsal || '-'} en ${atletaActual.distancia || 'General'}.`,
+                `Su tiempo oficial es ${atletaActual.tiempo_oficial || '--:--:--'} con ritmo promedio ${atletaActual.ritmo || '--:--'} min/km.`,
+                `Figura en la posicion general ${atletaActual.posGral || '-'} de ${totalRows || '-'} y en la posicion ${atletaActual.posCategoria || '-'} de la categoria ${atletaActual.categoria || 'General'}.`
+            ].join(' ');
+
+            return {
+                eventName: ui.tituloEvento.textContent,
+                eventDate: eventDate,
+                athleteName: atletaActual.nombre || 'Atleta',
+                bib: atletaActual.dorsal || '-',
+                distance: atletaActual.distancia || 'General',
+                category: atletaActual.categoria || 'General',
+                officialTime: atletaActual.tiempo_oficial || '--:--:--',
+                status: status.label,
+                percentile: stats.percentile,
+                categoryPercent: stats.categoryPercent,
+                narrative: narrative,
+                cards: [
+                    { label: 'Tiempo oficial', value: atletaActual.tiempo_oficial || '--:--:--', color: '#22c55e', help: 'Crono final' },
+                    { label: 'Tiempo chip', value: atletaActual.tiempo_chip || atletaActual.tiempo_oficial || '--:--:--', color: '#00CFFF', help: 'Lectura chip' },
+                    { label: 'Ritmo promedio', value: atletaActual.ritmo || '--:--', color: '#0E1525', help: 'min/km' },
+                    { label: 'Pos general', value: atletaActual.posGral || '-', color: '#00CFFF', help: `${totalRows || '-'} atletas` },
+                    { label: 'Pos categoria', value: atletaActual.posCategoria || '-', color: '#facc15', help: atletaActual.categoria || 'General' },
+                    { label: 'Pos genero', value: atletaActual.posGenero || '-', color: '#0E1525', help: atletaActual.genero || '-' },
+                    { label: 'Gap lider', value: stats.gapLeader, color: '#ef4444', help: 'Diferencia al primero' },
+                    { label: 'Gap podio cat.', value: stats.gapPodium, color: '#facc15', help: 'Referencia top 3' },
+                    { label: 'Mejor cat.', value: stats.categoryBest, color: '#22c55e', help: 'Marca de categoria' },
+                    { label: 'Promedio dist.', value: stats.averageDistance, color: '#0E1525', help: 'Atletas finalizados' }
+                ],
+                ranking: buildAthletePdfRanking(),
+                timeline: buildAthletePdfTimeline()
+            };
+        }
+
+        function openAthleteResultsPdf() {
+            if (!atletaActual || !window.YairExport) return;
+            const report = buildAthletePdfReport();
+            const filename = `resultado_${YairExport.slugify(eventoActual)}_${YairExport.slugify(atletaActual.dorsal + '_' + atletaActual.nombre)}.pdf`;
+            YairExport.openAthletePdf(report, filename);
+        }
+
+        async function renderLegacy(atleta, currentEventKey) {
+            const currentName = normalizeIdentity(atleta.nombre);
+            const allResultados = await YairStore.loadAllResultadosRecords();
+            const eventosVista = await YairStore.loadEventosVista();
+            const eventoMap = {};
+            eventosVista.forEach(function(item) {
+                eventoMap[item.eventoKey] = item;
+            });
+
+            const matches = [];
+            Object.keys(allResultados || {}).forEach(function(eventKey) {
+                if (eventKey === currentEventKey) return;
+                const atletas = YairStore.listAtletasEvento(allResultados[eventKey] || {});
+                const match = atletas.find(function(item) {
+                    return normalizeIdentity(item.nombre) === currentName;
+                });
+                if (!match) return;
+                const eventMeta = eventoMap[eventKey] || { nombre: YairStore.humanizeEventoKey(eventKey), fecha: '' };
+                const currentSeconds = validSeconds(atleta.tiempo_oficial);
+                const matchSeconds = validSeconds(match.tiempo_oficial);
+                const delta = Number.isFinite(currentSeconds) && Number.isFinite(matchSeconds)
+                    ? currentSeconds - matchSeconds
+                    : null;
+
+                matches.push({
+                    eventoKey: eventKey,
+                    nombreEvento: eventMeta.nombre,
+                    fecha: eventMeta.fecha || '',
+                    atleta: match,
+                    delta: delta
+                });
+            });
+
+            matches.sort(function(a, b) {
+                return String(b.fecha || '').localeCompare(String(a.fecha || ''));
+            });
+
+            if (!matches.length) {
+                ui.legacySummary.innerHTML = [
+                    buildStatCard('Eventos locales', '0', 'text-brand', 'Sin historial cacheado'),
+                    buildStatCard('Mejor marca local', '--:--:--', '', 'Importa mas eventos para comparar')
+                ].join('');
+                ui.legacyList.innerHTML = `
+                    <div class="bg-gray-50 dark:bg-cardAlt rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                        No encontramos otro resultado local con este mismo nombre en el navegador actual.
+                    </div>
+                `;
+                return;
+            }
+
+            const validHistorical = matches
+                .map(function(item) { return validSeconds(item.atleta.tiempo_oficial); })
+                .filter(Number.isFinite)
+                .sort(function(a, b) { return a - b; });
+
+            ui.legacySummary.innerHTML = [
+                buildStatCard('Eventos locales', matches.length, 'text-brand', 'Mismo nombre detectado'),
+                buildStatCard('Mejor marca local', validHistorical.length ? YairStore.secondsToRaceTime(validHistorical[0]) : '--:--:--', 'text-green-500', 'Entre eventos cacheados')
+            ].join('');
+
+            ui.legacyList.innerHTML = matches.map(function(item) {
+                let deltaText = 'Sin comparacion';
+                let deltaClass = 'text-gray-500';
+                if (item.delta != null) {
+                    if (item.delta < 0) {
+                        deltaText = `Hoy es mejor por ${formatGap(Math.abs(item.delta))}`;
+                        deltaClass = 'text-green-500';
+                    } else if (item.delta > 0) {
+                        deltaText = `Mejor que hoy por ${formatGap(item.delta)}`;
+                        deltaClass = 'text-yellow-500';
+                    } else {
+                        deltaText = 'Mismo tiempo que hoy';
+                        deltaClass = 'text-brand';
+                    }
+                }
+
+                return `
+                    <a href="atleta.html?evento=${encodeURIComponent(item.eventoKey)}&distancia=${encodeURIComponent(item.atleta.distancia || '')}&dorsal=${encodeURIComponent(item.atleta.dorsal)}" class="block bg-gray-50 dark:bg-cardAlt rounded-2xl border border-gray-200 dark:border-gray-800 p-4 hover:border-brand/40 transition">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="min-w-0">
+                                <p class="text-[11px] uppercase tracking-[0.25em] text-brand font-bold mb-2">${escapeHtml(item.nombreEvento)}</p>
+                                <p class="font-black text-lg leading-tight">${escapeHtml(item.atleta.nombre)}</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">${escapeHtml(item.atleta.distancia || 'General')} | ${escapeHtml(item.atleta.categoria || 'General')}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">${escapeHtml(formatDateLabel(item.fecha) || item.eventoKey)}</p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <p class="font-mono text-xl font-black">${escapeHtml(item.atleta.tiempo_oficial || '--:--:--')}</p>
+                                <p class="text-xs mt-2 ${deltaClass} font-bold">${escapeHtml(deltaText)}</p>
+                            </div>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+        }
+
+        function getDiplomaConfig(bundle) {
+            const config = (bundle && bundle.config) || {};
+            const diploma = config.diploma || {};
+            const defaults = {
+                nombre: { x: 50, y: 30, size: 42, color: '#111111', align: 'center', font: 'Arial' },
+                tiempo: { x: 50, y: 42, size: 34, color: '#00CFFF', align: 'center', font: 'Arial' },
+                posGeneral: { x: 22, y: 62, size: 44, color: '#111111', align: 'center', font: 'Arial' },
+                posCategoria: { x: 50, y: 62, size: 44, color: '#111111', align: 'center', font: 'Arial' },
+                categoria: { x: 50, y: 72, size: 24, color: '#333333', align: 'center', font: 'Arial' },
+                distancia: { x: 78, y: 62, size: 44, color: '#111111', align: 'center', font: 'Arial' },
+                evento: { x: 50, y: 86, size: 22, color: '#333333', align: 'center', font: 'Arial' },
+                fecha: { x: 50, y: 92, size: 18, color: '#555555', align: 'center', font: 'Arial' }
+            };
+            const mergedFields = {};
+            Object.keys(defaults).forEach(function(key) {
+                mergedFields[key] = Object.assign({}, defaults[key], (diploma.campos || {})[key] || {});
+            });
+            return {
+                imageUrl: config.diploma_url || diploma.plantilla_url || '',
+                footer: config.pie_diploma || diploma.pie || '',
+                fields: mergedFields
+            };
+        }
+
+        function wrapCenteredText(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = String(text || '').split(/\s+/).filter(Boolean);
+            if (!words.length) {
+                ctx.fillText('', x, y);
+                return;
+            }
+            let line = '';
+            let currentY = y;
+            words.forEach(function(word, index) {
+                const testLine = line ? line + ' ' + word : word;
+                if (ctx.measureText(testLine).width > maxWidth && line) {
+                    ctx.fillText(line, x, currentY);
+                    line = word;
+                    currentY += lineHeight;
+                } else {
+                    line = testLine;
+                }
+                if (index === words.length - 1) {
+                    ctx.fillText(line, x, currentY);
+                }
+            });
+        }
+
+        function drawDiplomaField(ctx, canvas, fieldValue, fieldConfig) {
+            const config = Object.assign({
+                x: 50,
+                y: 50,
+                size: 24,
+                color: '#111111',
+                align: 'center',
+                font: 'Arial'
+            }, fieldConfig || {});
+
+            const x = (Number(config.x) / 100) * canvas.width;
+            const y = (Number(config.y) / 100) * canvas.height;
+            ctx.fillStyle = config.color || '#111111';
+            ctx.textAlign = config.align || 'center';
+            ctx.font = `700 ${Number(config.size) || 24}px ${config.font || 'Arial'}`;
+            const text = String(fieldValue == null ? '' : fieldValue);
+            const maxWidth = canvas.width * 0.72;
+            const lineHeight = (Number(config.size) || 24) * 1.15;
+
+            if ((config.align || 'center') === 'center') {
+                wrapCenteredText(ctx, text, x, y, maxWidth, lineHeight);
+            } else {
+                ctx.fillText(text, x, y, maxWidth);
+            }
+        }
+
+        function openDiplomaModal() {
+            const diploma = getDiplomaConfig(runtimeBundle);
+            if (!diploma.imageUrl || !atletaActual) return;
+
+            ui.modalDiploma.classList.remove('hidden');
+            ui.diplomaLoading.innerHTML = `
+                <i class="fa-solid fa-spinner fa-spin text-3xl mb-3 text-brand"></i>
+                Generando diploma...
+            `;
+            ui.diplomaLoading.classList.remove('hidden');
+            ui.diplomaStage.classList.add('hidden');
+            ui.btnDescargarDiploma.disabled = true;
+
+            const canvas = ui.canvasDiploma;
+            const ctx = canvas.getContext('2d');
+            const image = new Image();
+            image.crossOrigin = 'anonymous';
+            image.onload = function() {
+                canvas.width = image.width;
+                canvas.height = image.height;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+                const fieldValues = {
+                    nombre: atletaActual.nombre || '',
+                    tiempo: atletaActual.tiempo_oficial || '--:--:--',
+                    posGeneral: atletaActual.posGral || '-',
+                    posCategoria: atletaActual.posCategoria || '-',
+                    categoria: atletaActual.categoria || 'General',
+                    distancia: atletaActual.distancia || 'General',
+                    evento: ui.tituloEvento.textContent || '',
+                    fecha: formatDateLabel((runtimeBundle.config && runtimeBundle.config.fecha) || '')
+                };
+
+                Object.keys(fieldValues).forEach(function(fieldKey) {
+                    drawDiplomaField(ctx, canvas, fieldValues[fieldKey], diploma.fields[fieldKey]);
+                });
+
+                if (diploma.footer) {
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#333333';
+                    ctx.font = `600 ${Math.max(Math.round(canvas.width * 0.013), 16)}px Arial`;
+                    ctx.fillText(diploma.footer, canvas.width / 2, canvas.height - Math.max(Math.round(canvas.height * 0.04), 30));
+                }
+
+                ui.diplomaLoading.classList.add('hidden');
+                ui.diplomaStage.classList.remove('hidden');
+                ui.btnDescargarDiploma.disabled = false;
+            };
+            image.onerror = function() {
+                ui.diplomaLoading.innerHTML = `
+                    <i class="fa-solid fa-triangle-exclamation text-3xl mb-3 text-red-500"></i>
+                    <p class="font-bold text-gray-900 dark:text-white">No se pudo generar el diploma</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Verifica la URL de la plantilla en el admin.</p>
+                `;
+            };
+            image.src = diploma.imageUrl;
+        }
+
+        function closeDiplomaModal() {
+            ui.modalDiploma.classList.add('hidden');
+        }
+
+        ui.btnCerrarDiploma.addEventListener('click', closeDiplomaModal);
+        ui.modalDiploma.addEventListener('click', function(event) {
+            if (event.target === ui.modalDiploma) closeDiplomaModal();
+        });
+        ui.btnDescargarDiploma.addEventListener('click', function() {
+            const link = document.createElement('a');
+            link.href = ui.canvasDiploma.toDataURL('image/png');
+            link.download = `diploma_${eventoActual}_${atletaActual ? atletaActual.dorsal : 'atleta'}.png`;
+            link.click();
+        });
+
+        function getReclamoTarget() {
+            const config = (runtimeBundle && runtimeBundle.config) || {};
+            const estado = (runtimeBundle && runtimeBundle.estado) || {};
+            const raw = config.reclamos_whatsapp || config.contacto_reclamos || estado.reclamos_whatsapp || estado.contacto_reclamos || '';
+            return String(raw || '').replace(/[^\d]/g, '');
+        }
+
+        function buildReclamoMessage() {
+            const reason = ui.reclamoMotivo.value;
+            const phone = ui.reclamoTelefono.value.trim();
+            const notes = ui.reclamoTexto.value.trim();
+            const message = [
+                'Hola, quiero registrar un reclamo del evento.',
+                `Evento: ${ui.tituloEvento.textContent}`,
+                `Atleta: ${atletaActual.nombre}`,
+                `Dorsal: ${atletaActual.dorsal}`,
+                `Distancia: ${atletaActual.distancia}`,
+                `Categoria: ${atletaActual.categoria || 'General'}`,
+                `Tiempo oficial: ${atletaActual.tiempo_oficial || '--:--:--'}`,
+                `Motivo: ${reason}`,
+                phone ? `Telefono: ${phone}` : '',
+                notes ? `Detalle: ${notes}` : '',
+                '',
+                'Enviado desde la ficha local del atleta.'
+            ].filter(Boolean).join('\n');
+            return message;
+        }
+
+        function openReclamoModal() {
+            ui.reclamoHint.classList.add('hidden');
+            ui.reclamoHint.textContent = '';
+            ui.modalReclamo.classList.remove('hidden');
+        }
+
+        function closeReclamoModal() {
+            ui.modalReclamo.classList.add('hidden');
+        }
+
+        ui.btnReclamo.addEventListener('click', openReclamoModal);
+        ui.btnCerrarReclamo.addEventListener('click', closeReclamoModal);
+        ui.modalReclamo.addEventListener('click', function(event) {
+            if (event.target === ui.modalReclamo) closeReclamoModal();
+        });
+
+        ui.btnCopiarReclamo.addEventListener('click', async function() {
+            const message = buildReclamoMessage();
+            try {
+                await navigator.clipboard.writeText(message);
+                ui.reclamoHint.textContent = 'Texto copiado al portapapeles.';
+                ui.reclamoHint.classList.remove('hidden');
+            } catch (error) {
+                ui.reclamoHint.textContent = 'No fue posible copiar automaticamente. Usa el boton de WhatsApp.';
+                ui.reclamoHint.classList.remove('hidden');
+            }
+        });
+
+        ui.btnEnviarReclamo.addEventListener('click', function() {
+            const message = buildReclamoMessage();
+            const target = getReclamoTarget();
+            const url = target
+                ? `https://wa.me/${encodeURIComponent(target)}?text=${encodeURIComponent(message)}`
+                : `https://wa.me/?text=${encodeURIComponent(message)}`;
+            window.open(url, '_blank');
+        });
+
+        async function shareAthlete() {
+            if (!atletaActual) return;
+            const shareText = [
+                `${atletaActual.nombre} - ${ui.tituloEvento.textContent}`,
+                `Dorsal #${atletaActual.dorsal}`,
+                `${atletaActual.distancia} | ${atletaActual.categoria || 'General'}`,
+                `Tiempo: ${atletaActual.tiempo_oficial || '--:--:--'}`,
+                window.location.href
+            ].join('\n');
+
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: `${atletaActual.nombre} | Yair Timings`,
+                        text: shareText,
+                        url: window.location.href
+                    });
+                    return;
+                } catch (error) {
+                    // Fallback to WhatsApp below
+                }
+            }
+
+            window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+        }
+
+        ui.btnCompartir.addEventListener('click', function() {
+            shareAthlete();
+        });
+
+        ui.btnPdfAtleta.addEventListener('click', function() {
+            openAthleteResultsPdf();
+        });
+
+        ui.btnCentrarRuta.addEventListener('click', function() {
+            if (!athleteMap) return;
+            if (mapRouteBounds && mapRouteBounds.isValid()) {
+                athleteMap.fitBounds(mapRouteBounds, { padding: [30, 30] });
+                return;
+            }
+            athleteMap.setView([4.5709, -74.2973], 5);
+        });
+
+        ui.btnCentrarAtleta.addEventListener('click', function() {
+            if (!athleteMap || !athleteMapMarker) return;
+            athleteMap.flyTo(athleteMapMarker.getLatLng(), Math.max(athleteMap.getZoom(), 13), {
+                animate: true,
+                duration: 0.8
+            });
+            if (typeof athleteMapMarker.openPopup === 'function') {
+                athleteMapMarker.openPopup();
+            }
+        });
+
+        async function cargarAtleta() {
+            try {
+                if (!eventoActual || !dorsalId) {
+                    throw new Error('Faltan parametros de evento o dorsal en la URL.');
+                }
+
+                runtimeBundle = await YairStore.loadEventoRuntime(eventoActual);
+                if (!runtimeBundle) {
+                    throw new Error('No se encontro el evento solicitado.');
+                }
+
+                eventoActual = runtimeBundle.eventoKey;
+                ui.tituloEvento.textContent = (runtimeBundle.config && runtimeBundle.config.nombre) || YairStore.humanizeEventoKey(eventoActual);
+                ui.btnVolver.onclick = function() {
+                    const distanciaQuery = distanciaParam ? `&distancia=${encodeURIComponent(distanciaParam)}` : '';
+                    window.location.href = `resultados.html?evento=${encodeURIComponent(eventoActual)}${distanciaQuery}`;
+                };
+
+                const resultados = runtimeBundle.resultados;
+                if (!resultados) {
+                    throw new Error('Este evento aun no tiene resultados guardados.');
+                }
+
+                const encontrado = YairStore.findAtleta(resultados, dorsalId, distanciaParam || undefined);
+                if (!encontrado) {
+                    throw new Error('No se encontro el atleta solicitado dentro del evento.');
+                }
+
+                distanciaParam = encontrado.distancia;
+                rankingRowsActual = computeRankingRows(resultados[distanciaParam] || {});
+                const athleteIndex = rankingRowsActual.findIndex(function(item) {
+                    return String(item.dorsal) === String(dorsalId);
+                });
+                atletaActual = Object.assign({ dorsal: dorsalId, distancia: distanciaParam }, encontrado.atleta);
+                if (athleteIndex >= 0) {
+                    atletaActual = Object.assign({}, rankingRowsActual[athleteIndex]);
+                }
+
+                const status = getAthleteStatus(atletaActual);
+                ui.estadoCarrera.className = status.className;
+                ui.estadoCarrera.innerHTML = `<span class="w-2 h-2 rounded-full bg-current opacity-70"></span> ${escapeHtml(status.label)}`;
+                ui.distanciaCat.textContent = `${atletaActual.distancia} | ${atletaActual.categoria || 'General'}`;
+                ui.nombre.textContent = atletaActual.nombre || 'Atleta';
+                ui.meta.textContent = `Evento ${ui.tituloEvento.textContent} | Fecha ${formatDateLabel((runtimeBundle.config && runtimeBundle.config.fecha) || '') || 'Sin fecha'} | Pais ${atletaActual.pais || 'COL'}`;
+                ui.badgeDorsal.textContent = `#${atletaActual.dorsal}`;
+                ui.badgeGenero.textContent = atletaActual.genero || '-';
+                ui.badgeGenero.className = 'px-3 py-2 rounded-full text-xs font-black uppercase tracking-wide ' + ((atletaActual.genero || '').toUpperCase() === 'F' ? 'bg-pink-500/15 text-pink-500' : 'bg-blue-500/15 text-blue-500');
+                ui.badgePais.textContent = atletaActual.pais || 'COL';
+                ui.badgeCategoria.textContent = atletaActual.categoria || 'General';
+                ui.tiempo.textContent = atletaActual.tiempo_oficial || '--:--:--';
+                ui.tiempoChip.textContent = atletaActual.tiempo_chip || atletaActual.tiempo_oficial || '--:--:--';
+                ui.ritmo.textContent = atletaActual.ritmo || '--:--';
+                ui.posiciones.textContent = `General ${atletaActual.posGral || '-'} | Genero ${atletaActual.posGenero || '-'} | Categoria ${atletaActual.posCategoria || '-'}`;
+
+                if ((atletaActual.genero || '').toUpperCase() === 'F') {
+                    ui.iconoGenero.className = 'fa-solid fa-venus text-4xl text-pink-500';
+                } else if ((atletaActual.genero || '').toUpperCase() === 'M') {
+                    ui.iconoGenero.className = 'fa-solid fa-mars text-4xl text-blue-500';
+                } else {
+                    ui.iconoGenero.className = 'fa-solid fa-user text-4xl text-gray-400 dark:text-gray-600';
+                }
+
+                const extraoficial = (runtimeBundle.config && runtimeBundle.config.resultados_oficiales === false) || (runtimeBundle.estado && runtimeBundle.estado.resultados_oficiales === false);
+                ui.avisoExtraoficial.classList.toggle('hidden', !extraoficial);
+
+                ui.subtituloEvento.textContent = `Analisis individual de ${atletaActual.nombre} en ${atletaActual.distancia}. La ficha usa el JSON interno cacheado del evento, junto con cualquier configuracion local disponible.`;
+                hideLoading();
+                ui.contenido.classList.remove('hidden');
+
+                renderPerformance(atletaActual, atletaActual, rankingRowsActual);
+                const timelineRows = renderTimeline(atletaActual, runtimeBundle, distanciaParam);
+                timelineRowsActual = timelineRows || [];
+                renderTopTable(rankingRowsActual, atletaActual.dorsal);
+                const legacyPromise = renderLegacy(atletaActual, eventoActual);
+                await renderMapModule(atletaActual, runtimeBundle, distanciaParam, timelineRows || []);
+                await legacyPromise;
+
+                if (runtimeBundle.config && runtimeBundle.config.chuspic_url) {
+                    ui.btnChuspic.classList.remove('hidden');
+                    ui.btnChuspic.onclick = function() {
+                        window.open(`${runtimeBundle.config.chuspic_url}?competitor=${encodeURIComponent(atletaActual.dorsal)}`, '_blank');
+                    };
+                } else {
+                    ui.btnChuspic.classList.add('hidden');
+                }
+
+                const diplomaConfig = getDiplomaConfig(runtimeBundle);
+                if (diplomaConfig.imageUrl) {
+                    ui.btnDiploma.disabled = false;
+                    ui.btnDiploma.onclick = openDiplomaModal;
+                } else {
+                    ui.btnDiploma.disabled = true;
+                    ui.btnDiploma.onclick = null;
+                }
+            } catch (error) {
+                renderError(error.message);
+            }
+        }
+
+        cargarAtleta();
+    </script>
+</body>
+</html>

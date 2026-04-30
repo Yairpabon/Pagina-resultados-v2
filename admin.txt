@@ -1,0 +1,16 @@
+ayudame  Ahora, ayúdame a ordenar la foto esa que te envié. Esa es la tabla donde uno muestra los resultados en el admin. Se ve ahí todo apilado, todo feo. Quiero que me ayudes a ordenar y darle un diseño mejor. Y dentro de ese apartado hay una cosa que se llama editar evento. Bueno, quiero que me ayudes a ordenar todo eso lo que está ahí. Porque todo se ve muy desordenado. y también quiero que añadas otra funcionalidad. Otra funcionalidad. La funcionalidad de diplomas está, pero está toda desordenada. Quiero que la hagas tipo mapping, que uno cargue la foto del diploma. Bueno, que uno ponga el URL, porque lo tengo así y después lo cambiaré a que cargue la foto. y que salgan todos los  DISEÑO GENERAL (IMPORTANTE)
+Estilo moderno tipo SaaS (Stripe / Notion / Vercel)
+Mucho espacio en blanco
+Cards con bordes suaves
+Tipografía clara
+Jerarquía visual fuerte
+Nada apilado sin orden
+⚙️ 4. REQUISITOS TÉCNICOS
+Código modular
+Componentes reutilizables
+Separación clara entre UI y lógica
+Preparado para escalar funcionalidades futuras
+Compatible con futura carga de imágenes en lugar de URL
+🚀 RESULTADO ESPERADO
+
+Un editor de eventos completamente reorganizado, limpio, moderno, y con un sistema de diplomas interactivo tipo Canva básico dentro del admin panel.encabezados y que uno lo arrastre y lo ponga tipo Canva. Ayúdame a generar este prompt.no es donde se muestran los resultados, es donde se montan los resultados.En el editor de eventos.

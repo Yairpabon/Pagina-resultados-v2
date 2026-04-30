@@ -1,0 +1,2215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Yair Timings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#00CFFF',
+                        dark: '#0A0A0A',
+                        card: '#111111'
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        body {
+            background-image:
+                radial-gradient(circle at top right, rgba(0, 207, 255, 0.10), transparent 30%),
+                radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.08), transparent 25%);
+        }
+        
+        .evento-card {
+            backdrop-filter: blur(10px);
+            transform: translateZ(0);
+        }
+        
+        .evento-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+            pointer-events: none;
+            border-radius: inherit;
+        }
+        
+        .evento-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            .evento-card {
+                background-color: rgba(17, 17, 17, 0.8);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-dark text-gray-900 dark:text-white font-sans antialiased min-h-screen transition-colors duration-300">
+    <div id="login-screen" class="fixed inset-0 bg-gray-100 dark:bg-dark flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-card p-8 rounded-3xl shadow-lg border border-gray-200 dark:border-gray-800 w-full max-w-md">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 rounded-2xl bg-brand/15 text-brand flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-stopwatch text-3xl"></i>
+                </div>
+                <h1 class="text-2xl font-black uppercase tracking-wide">Yair Timings</h1>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">Panel de administracion local</p>
+            </div>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Email</label>
+                    <input type="email" id="login-user" autocomplete="username" class="w-full bg-gray-100 dark:bg-dark border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-brand" placeholder="correo@ejemplo.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Contrasena</label>
+                    <input type="password" id="login-pass" autocomplete="current-password" class="w-full bg-gray-100 dark:bg-dark border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-brand" placeholder="••••••••">
+                </div>
+                <button id="login-submit" type="submit" class="w-full bg-brand hover:bg-cyan-300 text-dark font-black py-3 rounded-xl transition disabled:opacity-50">
+                    <i class="fa-solid fa-right-to-bracket mr-2"></i> Ingresar
+                </button>
+                <p id="login-error" class="text-red-500 text-sm text-center hidden">Credenciales incorrectas</p>
+            </form>
+        </div>
+    </div>
+
+    <div id="admin-panel" class="hidden">
+        <nav class="bg-white/90 dark:bg-card/95 backdrop-blur px-6 py-4 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="w-11 h-11 rounded-2xl bg-brand/15 text-brand flex items-center justify-center">
+                    <i class="fa-solid fa-stopwatch text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-lg font-black uppercase tracking-wide">Yair Timings</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-[0.2em]">Admin de resultados</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="theme-toggle" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:text-brand transition">
+                    <i class="fa-solid fa-moon dark:hidden"></i>
+                    <i class="fa-solid fa-sun hidden dark:inline"></i>
+                </button>
+                <button id="logout-btn" class="text-red-500 hover:text-red-400 text-sm font-bold">
+                    <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Salir
+                </button>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto px-6 py-8">
+            <div class="mb-8">
+                <p class="text-xs uppercase tracking-[0.3em] text-brand font-bold mb-3">Arquitectura por evento</p>
+                <h2 class="text-3xl md:text-4xl font-black uppercase tracking-tight">Catalogo y resultados - CSV</h2>
+                <p class="text-gray-500 dark:text-gray-400 mt-3 max-w-3xl">Crea eventos, publícalos aunque aun no tengan resultados 
+                    y carga el CSV cuando termine el cronometraje. Todo con unos simples clics </p>
+            </div>
+
+            <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <article class="bg-white dark:bg-card p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
+                    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Total eventos</p>
+                    <p class="text-3xl font-black text-brand mt-2" id="stat-total">0</p>
+                </article>
+                <article class="bg-white dark:bg-card p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
+                    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Publicados</p>
+                    <p class="text-3xl font-black text-green-500 mt-2" id="stat-publicados">0</p>
+                </article>
+                <article class="bg-white dark:bg-card p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
+                    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Ocultos</p>
+                    <p class="text-3xl font-black text-red-500 mt-2" id="stat-ocultos">0</p>
+                </article>
+                <article class="bg-white dark:bg-card p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
+                    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Total atletas</p>
+                    <p class="text-3xl font-black mt-2" id="stat-corredores">0</p>
+                </article>
+                <article class="bg-white dark:bg-card p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
+                    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Con resultados</p>
+                    <p class="text-3xl font-black text-green-500 mt-2" id="stat-con-resultados">0</p>
+                </article>
+                <article class="bg-white dark:bg-card p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
+                    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Distancias activas</p>
+                    <p class="text-3xl font-black text-cyan-500 mt-2" id="stat-distancias-global">0</p>
+                </article>
+                <article class="bg-white dark:bg-card p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
+                    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Duplicados globales</p>
+                    <p class="text-3xl font-black text-amber-500 mt-2" id="stat-duplicados-global">0</p>
+                </article>
+                <article class="bg-white dark:bg-card p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
+                    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Errores CSV</p>
+                    <p class="text-3xl font-black text-red-500 mt-2" id="stat-errores-global">0</p>
+                </article>
+            </section>
+
+            <section class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+                <div class="p-5 border-b border-gray-200 dark:border-gray-800 flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
+                    <div class="flex flex-col md:flex-row gap-3 w-full lg:w-auto">
+                        <div class="relative w-full lg:w-[28rem]">
+                            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="buscador-eventos" placeholder="Buscar evento..." class="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-gray-700 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-brand">
+                        </div>
+                        <select id="filtro-estado" class="bg-gray-50 dark:bg-dark border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand">
+                            <option value="TODOS">Todos</option>
+                            <option value="CON_RESULTADOS">Con resultados</option>
+                            <option value="ESPERANDO">Esperando resultados</option>
+                            <option value="PUBLICADOS">Publicados</option>
+                            <option value="OCULTOS">Ocultos</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button id="btn-exportar-backup" class="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-xl text-sm font-black">
+                            <i class="fa-solid fa-download mr-2 text-brand"></i> Backup local
+                        </button>
+                        <button id="btn-importar-backup" class="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-xl text-sm font-black">
+                            <i class="fa-solid fa-upload mr-2 text-brand"></i> Restaurar backup
+                        </button>
+                        <button id="btn-recargar-datos" class="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-xl text-sm font-black">
+                            <i class="fa-solid fa-rotate mr-2 text-brand"></i> Recargar
+                        </button>
+                        <button id="btn-limpiar-datos" class="bg-red-50 dark:bg-red-500/10 text-red-500 px-4 py-3 rounded-xl text-sm font-black border border-red-200 dark:border-red-500/20">
+                            <i class="fa-solid fa-trash-can mr-2"></i> Borrar local
+                        </button>
+                        <button id="btn-nuevo-evento" class="bg-brand text-dark px-4 py-3 rounded-xl text-sm font-black">
+                            <i class="fa-solid fa-plus mr-2"></i> Nuevo evento
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <button id="btn-ant" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 disabled:opacity-50">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <span class="text-sm text-gray-500 dark:text-gray-400 min-w-[110px] text-center" id="pagination-text">0 - 0 de 0</span>
+                            <button id="btn-sig" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 disabled:opacity-50">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="eventos-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+                    <div class="p-8 text-center text-gray-500">Cargando eventos...</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal-evento" class="fixed inset-0 bg-black/80 z-50 hidden overflow-y-auto">
+        <div class="max-w-6xl mx-auto my-8 px-4">
+            <div class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+                <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-xs uppercase tracking-[0.3em] text-brand font-bold">Editor de evento</p>
+                        <h3 class="text-2xl font-black uppercase" id="modal-titulo">Nuevo evento</h3>
+                    </div>
+                    <button id="cerrar-modal" class="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-white">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-6">
+                    <section class="bg-gray-50 dark:bg-dark rounded-2xl p-5">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                            <div>
+                                <p class="text-xs uppercase font-bold text-gray-500">Datos base</p>
+                                <h4 class="font-black text-lg">Identidad del evento</h4>
+                            </div>
+                            <button id="btn-guardar-evento" class="bg-brand text-dark px-4 py-3 rounded-xl text-sm font-black">
+                                <i class="fa-solid fa-save mr-2"></i> Guardar evento
+                            </button>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-gray-500 mb-1">eventoKey</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="evento-key-input" class="w-full bg-white dark:bg-card border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand" placeholder="mi-evento-2026">
+                                    <button id="btn-autokey" type="button" class="px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm font-black whitespace-nowrap">
+                                        <i class="fa-solid fa-wand-magic-sparkles mr-2 text-brand"></i> Auto
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-gray-500 mb-1">Nombre publico</label>
+                                <input type="text" id="evento-nombre-input" class="w-full bg-white dark:bg-card border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand" placeholder="Mi Evento 2026">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-gray-500 mb-1">Fecha</label>
+                                <input type="date" id="evento-fecha-input" class="w-full bg-white dark:bg-card border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-gray-500 mb-1">Imagen portada</label>
+                                <input type="text" id="evento-imagen-input" class="w-full bg-white dark:bg-card border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand" placeholder="https://...">
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-xs font-bold uppercase text-gray-500 mb-1">Distancias esperadas</label>
+                            <input type="text" id="evento-distancias-input" class="w-full bg-white dark:bg-card border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand" placeholder="5K, 10K, 21K">
+                        </div>
+                        <p id="evento-meta-hint" class="text-xs text-gray-500 mt-3">Crea el evento aqui y luego carga el CSV cuando los resultados esten listos.</p>
+                        <div class="flex flex-wrap gap-2 mt-4">
+                            <button id="btn-exportar-json-evento" type="button" class="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-xl text-sm font-black">
+                                <i class="fa-solid fa-file-code mr-2 text-brand"></i> Exportar JSON
+                            </button>
+                            <button id="btn-eliminar-cache-evento" type="button" class="bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-300 px-4 py-3 rounded-xl text-sm font-black border border-amber-200 dark:border-amber-500/20">
+                                <i class="fa-solid fa-broom mr-2"></i> Borrar resultados
+                            </button>
+                            <button id="btn-eliminar-evento-local" type="button" class="bg-red-50 dark:bg-red-500/10 text-red-500 px-4 py-3 rounded-xl text-sm font-black border border-red-200 dark:border-red-500/20">
+                                <i class="fa-solid fa-trash mr-2"></i> Eliminar evento local
+                            </button>
+                        </div>
+                    </section>
+
+                    <section class="grid xl:grid-cols-[1.15fr_0.85fr] gap-6">
+                        <div class="space-y-6">
+                            <div class="bg-gray-50 dark:bg-dark rounded-2xl p-5">
+                                <div class="flex items-center justify-between gap-4 mb-4">
+                                    <div>
+                                        <p class="text-xs uppercase font-bold text-gray-500">Publicacion</p>
+                                        <h4 class="font-black text-lg">Visibilidad del evento</h4>
+                                    </div>
+                                    <button id="btn-guardar-estado" class="bg-brand text-dark px-4 py-3 rounded-xl text-sm font-black">
+                                        <i class="fa-solid fa-bullhorn mr-2"></i> Guardar estado
+                                    </button>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-6">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="estado-publicar" value="true" class="accent-green-500">
+                                        <span class="font-bold text-green-500">Publicado</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="estado-publicar" value="false" class="accent-red-500">
+                                        <span class="font-bold text-red-500">Oculto</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 dark:bg-dark rounded-2xl p-5">
+                                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                                    <div>
+                                        <p class="text-xs uppercase font-bold text-gray-500">Resultados CSV</p>
+                                        <h4 class="font-black text-lg">Validacion de resultados </h4>
+                                    </div>
+                                    
+                                    <div class="flex flex-wrap gap-2">
+                                        <button id="btn-cargar-demo-csv" class="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-xl text-sm font-black">
+                                            <i class="fa-solid fa-flask mr-2 text-brand"></i> Cargar demo
+                                        </button>
+                                        <button id="btn-cargar-demo-errores" class="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-xl text-sm font-black">
+                                            <i class="fa-solid fa-triangle-exclamation mr-2 text-amber-500"></i> Demo errores
+                                        </button>
+                                      
+                                        <button id="btn-validar-csv" class="bg-green-600 hover:bg-green-500 text-white px-4 py-3 rounded-xl text-sm font-black">
+                                            <i class="fa-solid fa-vial-circle-check mr-2"></i> Validar CSV
+                                        </button>
+                                        <button id="btn-guardar-csv" class="bg-brand text-dark px-4 py-3 rounded-xl text-sm font-black disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                            <i class="fa-solid fa-database mr-2"></i> Evento Guardado
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-4">
+                                    <p class="text-sm font-black" id="csv-status">Sin resultados</p>
+                                    <p class="text-xs text-gray-500 mt-1" id="csv-meta">Sube un archivo CSV para validar y generar el JSON interno.</p>
+                                </div>
+
+                                <div class="bg-cyan-50 dark:bg-brand/10 border border-cyan-200 dark:border-brand/20 text-cyan-700 dark:text-cyan-300 rounded-2xl px-4 py-3 text-sm mb-4">
+                                    Regla de duplicados: <strong>mejor tiempo gana</strong>. Si ambos tiempos son invalidos, se conserva el ultimo registro.
+                                </div>
+
+                                <label class="flex items-start gap-3 bg-gray-100 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm mb-4">
+                                    <input type="checkbox" id="csv-force-distance" class="mt-1 accent-brand">
+                                    <span>
+                                        <strong>Forzar distancia del evento</strong><br>
+                                        Ignora la columna <strong>distancia</strong> del CSV y usa la distancia configurada en el evento. Util para archivos de una sola prueba con la columna mal llenada.
+                                    </span>
+                                </label>
+
+                                <div id="csv-alert-box" class="hidden rounded-2xl border px-4 py-3 text-sm mb-4"></div>
+
+                                <div id="csv-stats" class="hidden grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                    <div class="bg-white dark:bg-card p-4 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Distancias</p>
+                                        <p class="text-2xl font-black text-brand mt-1" id="csv-distancias">0</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card p-4 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Filas CSV</p>
+                                        <p class="text-2xl font-black text-slate-700 dark:text-slate-200 mt-1" id="csv-filas">0</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card p-4 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Filas validas</p>
+                                        <p class="text-2xl font-black text-cyan-500 mt-1" id="csv-validas">0</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card p-4 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Atletas</p>
+                                        <p class="text-2xl font-black mt-1" id="csv-atletas">0</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card p-4 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Llegados</p>
+                                        <p class="text-2xl font-black text-green-500 mt-1" id="csv-llegados">0</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card p-4 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Duplicados</p>
+                                        <p class="text-2xl font-black text-amber-500 mt-1" id="csv-duplicados">0</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card p-4 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Errores</p>
+                                        <p class="text-2xl font-black text-red-500 mt-1" id="csv-errores">0</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card p-4 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Sin tiempo</p>
+                                        <p class="text-2xl font-black text-amber-600 dark:text-amber-300 mt-1" id="csv-sin-tiempo">0</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card p-4 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
+                                        <p class="text-xs uppercase font-bold text-gray-500">% finalizacion</p>
+                                        <p class="text-2xl font-black text-green-500 mt-1" id="csv-finalizacion">0%</p>
+                                    </div>
+                                </div>
+
+                                <div id="csv-breakdown" class="hidden grid md:grid-cols-2 gap-3 mb-4">
+                                    <div class="bg-white dark:bg-card p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Distribucion por genero</p>
+                                        <p class="font-bold mt-2 text-sm" id="csv-genero">Sin datos</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Detalle por distancia</p>
+                                        <p class="font-bold mt-2 text-sm" id="csv-distancias-detalle">Sin datos</p>
+                                    </div>
+                                </div>
+
+                                <div id="csv-preview-wrapper" class="hidden bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden mb-4">
+                                    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Preview de importacion</p>
+                                    </div>
+                                    <div class="overflow-x-auto">
+                                        <table class="min-w-full text-sm">
+                                            <thead class="bg-gray-100 dark:bg-gray-800 text-gray-500 uppercase text-[11px]">
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left">Distancia</th>
+                                                    <th class="px-3 py-2 text-left">Dorsal</th>
+                                                    <th class="px-3 py-2 text-left">Nombre</th>
+                                                    <th class="px-3 py-2 text-left">Categoria</th>
+                                                    <th class="px-3 py-2 text-left">Tiempo</th>
+                                                    <th class="px-3 py-2 text-left">Ritmo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="csv-preview-body" class="divide-y divide-gray-200 dark:divide-gray-800"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div id="csv-errors-wrapper" class="hidden bg-white dark:bg-card rounded-2xl border border-red-200 dark:border-red-900/40 overflow-hidden mb-4">
+                                    <div class="px-4 py-3 border-b border-red-200 dark:border-red-900/40">
+                                        <p class="text-xs uppercase font-bold text-red-500">Errores de validacion</p>
+                                    </div>
+                                    <div id="csv-errors-body" class="p-4 space-y-3"></div>
+                                </div>
+
+                                <div id="csv-duplicates-wrapper" class="hidden bg-white dark:bg-card rounded-2xl border border-amber-200 dark:border-amber-900/40 overflow-hidden">
+                                    <div class="px-4 py-3 border-b border-amber-200 dark:border-amber-900/40">
+                                        <p class="text-xs uppercase font-bold text-amber-500">Detalle de duplicados</p>
+                                    </div>
+                                    <div id="csv-duplicates-body" class="p-4 space-y-4"></div>
+                                </div>
+
+                                <input type="file" id="csv-input" accept=".csv" class="hidden">
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="bg-gray-50 dark:bg-dark rounded-2xl p-5">
+                                <div class="flex items-center justify-between gap-3 mb-4">
+                                    <div>
+                                        <p class="text-xs uppercase font-bold text-gray-500">Diploma</p>
+                                        <h4 class="font-black text-lg">Configuracion visual</h4>
+                                    </div>
+                                    <button id="btn-guardar-diploma" class="bg-brand text-dark px-4 py-3 rounded-xl text-sm font-black">
+                                        <i class="fa-solid fa-award mr-2"></i> Guardar
+                                    </button>
+                                </div>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-gray-500 mb-1">URL plantilla</label>
+                                        <input type="text" id="diploma-url" class="w-full bg-white dark:bg-card border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand" placeholder="https://...">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-gray-500 mb-1">Texto pie</label>
+                                        <input type="text" id="diploma-pie" class="w-full bg-white dark:bg-card border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand" placeholder="Gracias por participar">
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-bold uppercase text-gray-500 mb-2">Campos configurables</p>
+                                        <div id="campos-config" class="grid grid-cols-2 gap-2"></div>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-bold uppercase text-gray-500 mb-2">Preview</p>
+                                        <div id="preview-diploma" class="w-full h-64 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-card flex items-center justify-center overflow-hidden">
+                                            <p class="text-gray-500 text-sm">Carga una plantilla para ver el preview</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 dark:bg-dark rounded-2xl p-5">
+                                <div class="flex items-center justify-between gap-3 mb-4">
+                                    <div>
+                                        <p class="text-xs uppercase font-bold text-gray-500">Fotos</p>
+                                        <h4 class="font-black text-lg">Chuspic</h4>
+                                    </div>
+                                    <button id="btn-guardar-chuspic" class="bg-brand text-dark px-4 py-3 rounded-xl text-sm font-black">
+                                        <i class="fa-solid fa-camera mr-2"></i> Guardar
+                                    </button>
+                                </div>
+                                <input type="text" id="chuspic-url" class="w-full bg-white dark:bg-card border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand" placeholder="https://...">
+                            </div>
+
+                            <div class="bg-gray-50 dark:bg-dark rounded-2xl p-5">
+                                <p class="text-xs uppercase font-bold text-gray-500 mb-1">Estadisticas del evento</p>
+                                <h4 class="font-black text-lg mb-4">Resumen actual</h4>
+                                <div class="grid gap-4">
+                                    <div class="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Por genero</p>
+                                        <p class="font-bold mt-2" id="stats-genero">Sin datos</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Categorias principales</p>
+                                        <p class="font-bold mt-2" id="stats-categoria">Sin datos</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Totales</p>
+                                        <p class="font-bold mt-2" id="stats-total">0 corredores</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Finalizacion</p>
+                                        <p class="font-bold mt-2" id="stats-finalizacion">0 / 0 (0%)</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Distancias</p>
+                                        <p class="font-bold mt-2" id="stats-distancias">Sin datos</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Tiempo promedio</p>
+                                        <p class="font-bold mt-2" id="stats-promedio">--:--:--</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Mejor tiempo</p>
+                                        <p class="font-bold mt-2" id="stats-mejor">--:--:--</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Importacion</p>
+                                        <p class="font-bold mt-2" id="stats-importacion">Sin cache</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Archivo fuente</p>
+                                        <p class="font-bold mt-2 text-sm" id="stats-archivo">Sin cache</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Alertas</p>
+                                        <p class="font-bold mt-2" id="stats-alertas">0 duplicados | 0 errores</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+                                        <p class="text-xs uppercase font-bold text-gray-500">Detalle por distancia</p>
+                                        <p class="font-bold mt-2 text-sm" id="stats-por-distancia">Sin datos</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Mapping de Columnas CSV -->
+    <div id="modal-column-mapping" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-card rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+            <!-- Header -->
+            <div class="sticky top-0 bg-white dark:bg-card border-b border-gray-200 dark:border-gray-700 p-6 flex justify-between items-center">
+                <div>
+                    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Paso 2 de 3</p>
+                    <h2 class="text-2xl font-black uppercase tracking-tight">Mapeo de Columnas CSV</h2>
+                </div>
+                <button id="btn-close-mapping-modal" type="button" class="w-10 h-10 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="p-6 space-y-6">
+                <!-- Info General -->
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 text-sm text-blue-700 dark:text-blue-300">
+                    <p><strong>ℹ️ Instrucciones:</strong> Asigna cada columna del CSV a un campo del sistema. Los campos marcados con <span class="text-red-500 font-bold">*</span> son obligatorios.</p>
+                </div>
+
+                <!-- Toggle: ¿Tiene encabezados? -->
+                <div class="bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-2xl p-4">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="csv-has-headers" checked class="w-5 h-5 accent-brand rounded">
+                        <span class="font-bold text-sm">¿La primera fila contiene encabezados de columna?</span>
+                    </label>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 ml-8">Si está marcado, la primera fila se usará como nombres de columnas y no se incluirá en los datos.</p>
+                </div>
+
+                <!-- Preview del CSV -->
+                <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 overflow-x-auto">
+                    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 mb-3">Preview de datos</p>
+                    <table class="min-w-full text-xs">
+                        <thead class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                            <tr id="csv-preview-headers-row"></tr>
+                        </thead>
+                        <tbody id="csv-preview-data-rows" class="text-gray-700 dark:text-gray-300">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Mapeo de Columnas -->
+                <div class="space-y-3">
+                    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Asignar columnas a campos</p>
+                    <div id="mapping-controls" class="space-y-2">
+                        <!-- Se genera dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Validaciones -->
+                <div id="mapping-validation-box" class="hidden bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4">
+                    <p class="text-sm font-bold text-red-600 dark:text-red-400 mb-2">⚠️ Errores de validación:</p>
+                    <ul id="mapping-validation-errors" class="text-sm text-red-600 dark:text-red-400 space-y-1 list-disc list-inside"></ul>
+                </div>
+
+                <!-- Resumen de Mapping -->
+                <div class="bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-2xl p-4">
+                    <p class="text-sm font-bold text-cyan-700 dark:text-cyan-300 mb-2">✅ Campos mapeados:</p>
+                    <p id="mapping-summary" class="text-sm text-cyan-700 dark:text-cyan-300">Selecciona los campos arriba</p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="sticky bottom-0 bg-white dark:bg-card border-t border-gray-200 dark:border-gray-700 p-6 flex gap-3 justify-between">
+                <button id="btn-cancel-mapping" type="button" class="px-6 py-3 rounded-xl font-black bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                    Cancelar
+                </button>
+                <button id="btn-auto-mapping" type="button" class="px-6 py-3 rounded-xl font-black bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Auto-detectar
+                </button>
+                <button id="btn-apply-mapping" type="button" class="px-6 py-3 rounded-xl font-black bg-brand hover:bg-cyan-300 text-dark transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i class="fa-solid fa-arrow-right mr-2"></i> Continuar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="backup-input" accept=".json,application/json" class="hidden">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./js/columnMapping.js"></script>
+    <script src="./js/csvParser.js"></script>
+    <script src="./js/supabaseClient.js"></script>
+    <script src="./js/supabaseStore.js"></script>
+    <script>
+        window.onerror = function(msg, url, line) {
+            console.error('Error:', msg, 'linea', line);
+            return false;
+        };
+
+        const ITEMS_PER_PAGE = 10;
+
+        const ui = {
+            loginScreen: document.getElementById('login-screen'),
+            adminPanel: document.getElementById('admin-panel'),
+            loginForm: document.getElementById('login-form'),
+            loginError: document.getElementById('login-error'),
+            themeToggle: document.getElementById('theme-toggle'),
+            logoutBtn: document.getElementById('logout-btn'),
+            statTotal: document.getElementById('stat-total'),
+            statPublicados: document.getElementById('stat-publicados'),
+            statOcultos: document.getElementById('stat-ocultos'),
+            statCorredores: document.getElementById('stat-corredores'),
+            statConResultados: document.getElementById('stat-con-resultados'),
+            statDistanciasGlobal: document.getElementById('stat-distancias-global'),
+            statDuplicadosGlobal: document.getElementById('stat-duplicados-global'),
+            statErroresGlobal: document.getElementById('stat-errores-global'),
+            buscador: document.getElementById('buscador-eventos'),
+            filtroEstado: document.getElementById('filtro-estado'),
+            btnExportarBackup: document.getElementById('btn-exportar-backup'),
+            btnImportarBackup: document.getElementById('btn-importar-backup'),
+            btnRecargarDatos: document.getElementById('btn-recargar-datos'),
+            btnLimpiarDatos: document.getElementById('btn-limpiar-datos'),
+            btnNuevoEvento: document.getElementById('btn-nuevo-evento'),
+            btnAnt: document.getElementById('btn-ant'),
+            btnSig: document.getElementById('btn-sig'),
+            paginationText: document.getElementById('pagination-text'),
+            eventosContainer: document.getElementById('eventos-container'),
+            modal: document.getElementById('modal-evento'),
+            modalTitulo: document.getElementById('modal-titulo'),
+            cerrarModal: document.getElementById('cerrar-modal'),
+            eventoKey: document.getElementById('evento-key-input'),
+            eventoNombre: document.getElementById('evento-nombre-input'),
+            eventoFecha: document.getElementById('evento-fecha-input'),
+            eventoImagen: document.getElementById('evento-imagen-input'),
+            eventoDistancias: document.getElementById('evento-distancias-input'),
+            eventoHint: document.getElementById('evento-meta-hint'),
+            btnAutokey: document.getElementById('btn-autokey'),
+            btnGuardarEvento: document.getElementById('btn-guardar-evento'),
+            btnExportarJsonEvento: document.getElementById('btn-exportar-json-evento'),
+            btnEliminarCacheEvento: document.getElementById('btn-eliminar-cache-evento'),
+            btnEliminarEventoLocal: document.getElementById('btn-eliminar-evento-local'),
+            btnGuardarEstado: document.getElementById('btn-guardar-estado'),
+            btnGuardarDiploma: document.getElementById('btn-guardar-diploma'),
+            btnGuardarChuspic: document.getElementById('btn-guardar-chuspic'),
+            estadoRadios: document.querySelectorAll('input[name="estado-publicar"]'),
+            diplomaUrl: document.getElementById('diploma-url'),
+            diplomaPie: document.getElementById('diploma-pie'),
+            camposConfig: document.getElementById('campos-config'),
+            previewDiploma: document.getElementById('preview-diploma'),
+            chuspicUrl: document.getElementById('chuspic-url'),
+            csvInput: document.getElementById('csv-input'),
+            csvForceDistance: document.getElementById('csv-force-distance'),
+            backupInput: document.getElementById('backup-input'),
+            btnCargarDemoCsv: document.getElementById('btn-cargar-demo-csv'),
+            btnCargarDemoErrores: document.getElementById('btn-cargar-demo-errores'),
+            btnValidarCsv: document.getElementById('btn-validar-csv'),
+            btnGuardarCsv: document.getElementById('btn-guardar-csv'),
+            csvStatus: document.getElementById('csv-status'),
+            csvMeta: document.getElementById('csv-meta'),
+            csvAlert: document.getElementById('csv-alert-box'),
+            csvStats: document.getElementById('csv-stats'),
+            csvDistancias: document.getElementById('csv-distancias'),
+            csvFilas: document.getElementById('csv-filas'),
+            csvValidas: document.getElementById('csv-validas'),
+            csvAtletas: document.getElementById('csv-atletas'),
+            csvLlegados: document.getElementById('csv-llegados'),
+            csvDuplicados: document.getElementById('csv-duplicados'),
+            csvErrores: document.getElementById('csv-errores'),
+            csvSinTiempo: document.getElementById('csv-sin-tiempo'),
+            csvFinalizacion: document.getElementById('csv-finalizacion'),
+            csvBreakdown: document.getElementById('csv-breakdown'),
+            csvGenero: document.getElementById('csv-genero'),
+            csvDistanciasDetalle: document.getElementById('csv-distancias-detalle'),
+            csvPreviewWrapper: document.getElementById('csv-preview-wrapper'),
+            csvPreviewBody: document.getElementById('csv-preview-body'),
+            csvErrorsWrapper: document.getElementById('csv-errors-wrapper'),
+            csvErrorsBody: document.getElementById('csv-errors-body'),
+            csvDuplicatesWrapper: document.getElementById('csv-duplicates-wrapper'),
+            csvDuplicatesBody: document.getElementById('csv-duplicates-body'),
+            statsGenero: document.getElementById('stats-genero'),
+            statsCategoria: document.getElementById('stats-categoria'),
+            statsTotal: document.getElementById('stats-total'),
+            statsFinalizacion: document.getElementById('stats-finalizacion'),
+            statsDistancias: document.getElementById('stats-distancias'),
+            statsPromedio: document.getElementById('stats-promedio'),
+            statsMejor: document.getElementById('stats-mejor'),
+            statsImportacion: document.getElementById('stats-importacion'),
+            statsArchivo: document.getElementById('stats-archivo'),
+            statsAlertas: document.getElementById('stats-alertas'),
+            statsPorDistancia: document.getElementById('stats-por-distancia'),
+            
+            // Modal de Mapping
+            mappingModal: document.getElementById('modal-column-mapping'),
+            mappingHasHeaders: document.getElementById('csv-has-headers'),
+            mappingControls: document.getElementById('mapping-controls'),
+            mappingValidationBox: document.getElementById('mapping-validation-box'),
+            mappingValidationErrors: document.getElementById('mapping-validation-errors'),
+            mappingSummary: document.getElementById('mapping-summary'),
+            btnCloseMappingModal: document.getElementById('btn-close-mapping-modal'),
+            btnCancelMapping: document.getElementById('btn-cancel-mapping'),
+            btnAutoMapping: document.getElementById('btn-auto-mapping'),
+            btnApplyMapping: document.getElementById('btn-apply-mapping'),
+            csvPreviewHeadersRow: document.getElementById('csv-preview-headers-row'),
+            csvPreviewDataRows: document.getElementById('csv-preview-data-rows')
+        };
+
+        let catalogoEventos = {};
+        let estadoEventos = { eventos: {} };
+        let recordsResultados = [];
+        let recordMap = {};
+        let filteredKeys = [];
+        let currentPage = 1;
+        let activeEventKey = null;
+        let pendingImport = null;
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function normalizeEventName(eventKey, config) {
+            return (config && config.nombre) || YairStore.humanizeEventoKey(eventKey);
+        }
+
+        function sortDistanceLabels(values) {
+            return (values || []).slice().sort(function(a, b) {
+                return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+            });
+        }
+
+        function parseManualDistances(value) {
+            return sortDistanceLabels(
+                String(value || '')
+                    .split(/[,;\n]+/)
+                    .map(function(part) { return part.trim(); })
+                    .filter(Boolean)
+            );
+        }
+
+        function formatDateTime(value) {
+            if (!value) return 'Sin dato';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+            return date.toLocaleString();
+        }
+
+        function getRuntimeScopeLabel() {
+            if (window.location.protocol === 'file:') {
+                return 'file:// (mismo navegador y misma ruta local)';
+            }
+            return window.location.origin;
+        }
+
+        function formatCountMap(map, emptyText, limit) {
+            const entries = Object.entries(map || {}).filter(function(entry) {
+                return entry[1] > 0;
+            }).sort(function(a, b) {
+                return b[1] - a[1];
+            });
+
+            if (!entries.length) {
+                return emptyText || 'Sin datos';
+            }
+
+            return entries.slice(0, limit || entries.length).map(function(entry) {
+                return `${entry[0]}: ${entry[1]}`;
+            }).join(' | ');
+        }
+
+        function mergeEventStats(record, resultados) {
+            const computed = YairStore.summarizeResultados(resultados || {});
+            const saved = record && record.stats ? record.stats : {};
+            return Object.assign({}, computed, saved, {
+                porGenero: Object.assign({}, computed.porGenero || {}, saved.porGenero || {}),
+                porCategoria: Object.assign({}, computed.porCategoria || {}, saved.porCategoria || {}),
+                porDistancia: Object.assign({}, computed.porDistancia || {}, saved.porDistancia || {})
+            });
+        }
+
+        function downloadJsonFile(filename, payload) {
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }
+
+        function getDemoCsvUrl(type) {
+            if (type === 'errores') {
+                return './resultados-csv/demo-validacion-admin-2026.csv';
+            }
+            return './resultados-csv/demo-trail-multidistancia-2026.csv';
+        }
+
+        function getStateForEvent(eventKey) {
+            const raw = (estadoEventos.eventos && estadoEventos.eventos[eventKey]) || {};
+            return {
+                publicado: typeof raw.publicado === 'boolean' ? raw.publicado : true,
+                fecha_publicacion: raw.fecha_publicacion || '',
+                chuspic_url: raw.chuspic_url || '',
+                diploma: raw.diploma || { plantilla_url: '', pie: '', campos: {} }
+            };
+        }
+
+        function getRecordForEvent(eventKey) {
+            return recordMap[eventKey] || null;
+        }
+
+        function getDistancesForEvent(config, record) {
+            if (record && record.stats && Array.isArray(record.stats.distancias) && record.stats.distancias.length) {
+                return sortDistanceLabels(record.stats.distancias);
+            }
+            if (config && Array.isArray(config.distancias) && config.distancias.length) {
+                return sortDistanceLabels(config.distancias);
+            }
+            if (config && config.rutas_utmb) {
+                return sortDistanceLabels(Object.keys(config.rutas_utmb));
+            }
+            return [];
+        }
+
+        function getEventView(eventKey) {
+            const config = catalogoEventos[eventKey] || {};
+            const state = getStateForEvent(eventKey);
+            const record = getRecordForEvent(eventKey);
+            const distances = getDistancesForEvent(config, record);
+            return {
+                eventoKey: eventKey,
+                nombre: normalizeEventName(eventKey, config),
+                fecha: config.fecha || '',
+                imagen_url: config.imagen_url || '',
+                distancias: distances,
+                publicado: state.publicado,
+                totalAtletas: record && record.stats ? record.stats.totalAtletas || 0 : 0,
+                llegados: record && record.stats ? record.stats.llegados || 0 : 0,
+                finalizacionPct: record && record.stats ? record.stats.finalizacionPct || 0 : 0,
+                duplicados: record && record.stats ? record.stats.duplicadosCount || 0 : 0,
+                importedAt: record ? record.importedAt || '' : '',
+                originalFileName: record ? record.originalFileName || '' : '',
+                hasResultados: !!(record && record.stats && record.stats.totalAtletas > 0),
+                estadoLabel: record && record.stats && record.stats.totalAtletas > 0 ? 'Resultados cargados' : 'Esperando resultados'
+            };
+        }
+
+        function setEventKeyReadonly(readonly) {
+            ui.eventoKey.readOnly = readonly;
+            ui.eventoKey.classList.toggle('opacity-70', readonly);
+        }
+
+        function getSelectedPublished() {
+            const selected = document.querySelector('input[name="estado-publicar"]:checked');
+            return selected ? selected.value === 'true' : true;
+        }
+
+        function getFormEventData() {
+            const eventKey = ui.eventoKey.value.trim();
+            return {
+                eventoKey: eventKey,
+                nombre: ui.eventoNombre.value.trim() || YairStore.humanizeEventoKey(eventKey),
+                fecha: ui.eventoFecha.value || '',
+                imagen_url: ui.eventoImagen.value.trim(),
+                distancias: parseManualDistances(ui.eventoDistancias.value)
+            };
+        }
+
+        function buildImportOptions(formData) {
+            const data = formData || getFormEventData();
+            const forceDistance = !!(ui.csvForceDistance && ui.csvForceDistance.checked);
+            if (data.distancias && data.distancias.length === 1) {
+                return {
+                    defaultDistance: data.distancias[0],
+                    ignoreCsvDistance: forceDistance
+                };
+            }
+            return { ignoreCsvDistance: forceDistance };
+        }
+
+        function syncForceDistanceControl() {
+            const distances = parseManualDistances(ui.eventoDistancias.value);
+            const enabled = distances.length === 1;
+            ui.csvForceDistance.disabled = !enabled;
+            if (!enabled) {
+                ui.csvForceDistance.checked = false;
+                ui.csvForceDistance.title = 'Disponible solo cuando el evento tiene una unica distancia configurada.';
+            } else {
+                ui.csvForceDistance.title = '';
+            }
+        }
+
+        function resetEventStats() {
+            ui.statsGenero.textContent = 'Sin datos';
+            ui.statsCategoria.textContent = 'Sin datos';
+            ui.statsTotal.textContent = '0 corredores';
+            ui.statsFinalizacion.textContent = '0 / 0 (0%)';
+            ui.statsDistancias.textContent = 'Sin datos';
+            ui.statsPromedio.textContent = '--:--:--';
+            ui.statsMejor.textContent = '--:--:--';
+            ui.statsImportacion.textContent = 'Sin cache';
+            ui.statsArchivo.textContent = 'Sin cache';
+            ui.statsAlertas.textContent = '0 duplicados | 0 errores';
+            ui.statsPorDistancia.textContent = 'Sin datos';
+        }
+
+        function setCsvBanner(type, message) {
+            const classes = {
+                success: 'border-green-200 bg-green-50 text-green-700 dark:border-green-900/40 dark:bg-green-900/10 dark:text-green-300',
+                warning: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/10 dark:text-amber-300',
+                error: 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/40 dark:bg-red-900/10 dark:text-red-300'
+            };
+            ui.csvAlert.className = 'rounded-2xl border px-4 py-3 text-sm mb-4 ' + (classes[type] || classes.success);
+            ui.csvAlert.innerHTML = message;
+        }
+
+        function clearCsvViews() {
+            ui.btnGuardarCsv.disabled = true;
+            ui.csvAlert.className = 'hidden rounded-2xl border px-4 py-3 text-sm mb-4';
+            ui.csvAlert.innerHTML = '';
+            ui.csvStats.classList.add('hidden');
+            ui.csvBreakdown.classList.add('hidden');
+            ui.csvPreviewWrapper.classList.add('hidden');
+            ui.csvErrorsWrapper.classList.add('hidden');
+            ui.csvDuplicatesWrapper.classList.add('hidden');
+            ui.csvPreviewBody.innerHTML = '';
+            ui.csvErrorsBody.innerHTML = '';
+            ui.csvDuplicatesBody.innerHTML = '';
+            ui.csvGenero.textContent = 'Sin datos';
+            ui.csvDistanciasDetalle.textContent = 'Sin datos';
+        }
+
+        function renderCsvStats(stats) {
+            ui.csvStats.classList.remove('hidden');
+            ui.csvDistancias.textContent = (stats.distancias || []).length;
+            ui.csvFilas.textContent = stats.totalFilas || 0;
+            ui.csvValidas.textContent = stats.filasValidas || 0;
+            ui.csvAtletas.textContent = stats.totalAtletas || 0;
+            ui.csvLlegados.textContent = stats.llegados || 0;
+            ui.csvDuplicados.textContent = stats.duplicadosCount || 0;
+            ui.csvErrores.textContent = stats.totalErrores || 0;
+            ui.csvSinTiempo.textContent = stats.sinTiempo || 0;
+            ui.csvFinalizacion.textContent = `${stats.finalizacionPct || 0}%`;
+            ui.csvGenero.textContent = formatCountMap(stats.porGenero, 'Sin datos');
+            ui.csvDistanciasDetalle.textContent = Object.entries(stats.porDistancia || {}).map(function(entry) {
+                const distanceStats = entry[1] || {};
+                return `${entry[0]}: ${distanceStats.llegados || 0}/${distanceStats.total || 0}`;
+            }).join(' | ') || 'Sin datos';
+            ui.csvBreakdown.classList.remove('hidden');
+        }
+
+        function renderPreviewRows(rows) {
+            if (!rows || !rows.length) {
+                ui.csvPreviewBody.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-center text-gray-500">Sin filas para mostrar</td></tr>';
+                return;
+            }
+
+            ui.csvPreviewBody.innerHTML = rows.map(function(row) {
+                return `
+                    <tr>
+                        <td class="px-3 py-2">${escapeHtml(row.distancia)}</td>
+                        <td class="px-3 py-2 font-mono">${escapeHtml(row.dorsal)}</td>
+                        <td class="px-3 py-2">${escapeHtml(row.nombre)}</td>
+                        <td class="px-3 py-2">${escapeHtml(row.categoria)}</td>
+                        <td class="px-3 py-2 font-mono">${escapeHtml(row.tiempo_oficial)}</td>
+                        <td class="px-3 py-2 font-mono">${escapeHtml(row.ritmo)}</td>
+                    </tr>
+                `;
+            }).join('');
+            ui.csvPreviewWrapper.classList.remove('hidden');
+        }
+
+        function renderValidationErrors(errors) {
+            if (!errors || !errors.length) {
+                ui.csvErrorsWrapper.classList.add('hidden');
+                ui.csvErrorsBody.innerHTML = '';
+                return;
+            }
+
+            ui.csvErrorsBody.innerHTML = errors.slice(0, 12).map(function(item) {
+                return `
+                    <div class="rounded-2xl border border-red-200 dark:border-red-900/40 p-4">
+                        <p class="font-black text-red-500 text-sm">Linea ${escapeHtml(item.linea)}</p>
+                        <p class="text-sm text-gray-700 dark:text-gray-300 mt-1">${escapeHtml((item.errores || []).join(' | '))}</p>
+                    </div>
+                `;
+            }).join('');
+            ui.csvErrorsWrapper.classList.remove('hidden');
+        }
+
+        function renderDuplicates(duplicates) {
+            if (!duplicates || !duplicates.length) {
+                ui.csvDuplicatesWrapper.classList.add('hidden');
+                ui.csvDuplicatesBody.innerHTML = '';
+                return;
+            }
+
+            ui.csvDuplicatesBody.innerHTML = duplicates.map(function(group) {
+                const registros = (group.registros || []).map(function(record) {
+                    return `
+                        <div class="rounded-2xl border border-amber-200 dark:border-amber-900/40 p-3">
+                            <p class="font-black ${record.kept ? 'text-green-500' : 'text-gray-900 dark:text-white'}">Linea ${escapeHtml(record.linea)} | ${escapeHtml(record.nombre)}</p>
+                            <p class="text-xs text-gray-500 mt-1">${escapeHtml(record.distancia)} | dorsal ${escapeHtml(record.dorsal)} | ${escapeHtml(record.tiempo)} | ${escapeHtml(record.categoria)}</p>
+                            <p class="text-xs mt-1 ${record.kept ? 'text-green-500' : 'text-amber-500'}">${record.kept ? 'Se conserva' : 'Descartado'}: ${escapeHtml(record.motivo || '')}</p>
+                        </div>
+                    `;
+                }).join('');
+                return `
+                    <div class="rounded-2xl border border-amber-200 dark:border-amber-900/40 p-4">
+                        <p class="text-xs uppercase font-black text-amber-500">${escapeHtml(group.distancia)} | dorsal ${escapeHtml(group.dorsal)}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 mt-2 mb-3">Resolucion aplicada: mejor tiempo gana.</p>
+                        <div class="space-y-2">${registros}</div>
+                    </div>
+                `;
+            }).join('');
+            ui.csvDuplicatesWrapper.classList.remove('hidden');
+        }
+
+        function renderCsvPreview(preview) {
+            clearCsvViews();
+            ui.csvStatus.innerHTML = '<i class="fa-solid fa-vial-circle-check text-brand mr-2"></i> Preview listo';
+            const usedDefaultDistance = !!(
+                preview &&
+                preview.importOptions &&
+                preview.importOptions.defaultDistance &&
+                (!(preview.normalizedHeaders || []).includes('distancia') || preview.importOptions.ignoreCsvDistance)
+            );
+            const importModeLabel = usedDefaultDistance
+                ? (preview.importOptions.ignoreCsvDistance ? ` | distancia forzada: ${preview.importOptions.defaultDistance}` : ` | distancia asumida: ${preview.importOptions.defaultDistance}`)
+                : '';
+            ui.csvMeta.textContent = `${preview.originalFileName || 'CSV'} | hash ${preview.sourceHash}${importModeLabel}`;
+            renderCsvStats(preview.stats || {});
+            renderPreviewRows(preview.previewRows || []);
+            renderValidationErrors(preview.validationErrors || []);
+            renderDuplicates(preview.duplicates || []);
+
+            if (preview.validationErrors && preview.validationErrors.length) {
+                setCsvBanner('error', `Se detectaron <strong>${preview.validationErrors.length}</strong> filas invalidas. Corrige el CSV antes de guardarlo.`);
+                ui.btnGuardarCsv.disabled = true;
+            } else if (usedDefaultDistance && preview.duplicates && preview.duplicates.length) {
+                setCsvBanner('warning', `${preview.importOptions.ignoreCsvDistance ? 'Se ignoro la columna <strong>distancia</strong> del CSV.' : 'CSV sin columna <strong>distancia</strong>.'} Se uso la distancia configurada del evento: <strong>${escapeHtml(preview.importOptions.defaultDistance)}</strong>. Tambien se detectaron <strong>${preview.duplicates.length}</strong> grupos duplicados.`);
+                ui.btnGuardarCsv.disabled = false;
+            } else if (usedDefaultDistance) {
+                setCsvBanner('success', `CSV validado correctamente ${preview.importOptions.ignoreCsvDistance ? 'ignorando la columna <strong>distancia</strong> del archivo y ' : ''}usando la distancia configurada del evento: <strong>${escapeHtml(preview.importOptions.defaultDistance)}</strong>.`);
+                ui.btnGuardarCsv.disabled = false;
+            } else if (preview.duplicates && preview.duplicates.length) {
+                setCsvBanner('warning', `Importacion valida con <strong>${preview.duplicates.length}</strong> grupos de duplicados. La regla activa es <strong>${YairStore.DUPLICATE_POLICY}</strong>.`);
+                ui.btnGuardarCsv.disabled = false;
+            } else {
+                setCsvBanner('success', 'CSV validado correctamente. Puedes guardar el JSON interno en cache local.');
+                ui.btnGuardarCsv.disabled = false;
+            }
+        }
+
+        function buildRecordPreviewRows(record) {
+            return YairStore.listAtletasEvento(record.resultados || {}).slice(0, 12).map(function(atleta) {
+                return {
+                    distancia: atleta.distancia,
+                    dorsal: atleta.dorsal,
+                    nombre: atleta.nombre,
+                    categoria: atleta.categoria,
+                    tiempo_oficial: atleta.tiempo_oficial,
+                    ritmo: atleta.ritmo
+                };
+            });
+        }
+
+        function renderCsvRecord(record) {
+            clearCsvViews();
+            ui.csvStatus.innerHTML = '<i class="fa-solid fa-check-circle text-green-500 mr-2"></i> Cache guardado';
+            ui.csvMeta.textContent = `${record.originalFileName || 'Sin nombre'} | ${new Date(record.importedAt).toLocaleString()}`;
+            renderCsvStats(record.stats || {});
+            renderPreviewRows(buildRecordPreviewRows(record));
+            renderValidationErrors(record.validationErrors || []);
+            renderDuplicates(record.duplicates || []);
+
+            if (record.validationErrors && record.validationErrors.length) {
+                setCsvBanner('error', `Ultimo analisis con <strong>${record.validationErrors.length}</strong> filas invalidas.`);
+            } else if (record.duplicates && record.duplicates.length) {
+                setCsvBanner('warning', `Resultados guardados con <strong>${record.duplicates.length}</strong> grupos duplicados resueltos.`);
+            } else {
+                setCsvBanner('success', 'Resultados guardados correctamente en el cache local del navegador.');
+            }
+        }
+
+        function renderEmptyCsvState(message) {
+            pendingImport = null;
+            clearCsvViews();
+            ui.csvStatus.textContent = 'Sin resultados';
+            ui.csvMeta.textContent = message || 'Sube un archivo CSV para validar y guardar.';
+        }
+
+        function renderDashboard() {
+            const keys = Object.keys(catalogoEventos);
+            let publicados = 0;
+            let totalAtletas = 0;
+            let conResultados = 0;
+            let duplicadosGlobales = 0;
+            let erroresGlobales = 0;
+            const distanciasActivas = new Set();
+
+            keys.forEach(function(eventKey) {
+                if (getStateForEvent(eventKey).publicado) {
+                    publicados += 1;
+                }
+            });
+
+            recordsResultados.forEach(function(record) {
+                if (record && record.stats) {
+                    totalAtletas += record.stats.totalAtletas || 0;
+                    conResultados += 1;
+                    duplicadosGlobales += record.stats.duplicadosCount || 0;
+                    erroresGlobales += record.stats.totalErrores || 0;
+                    (record.stats.distancias || []).forEach(function(distance) {
+                        distanciasActivas.add(distance);
+                    });
+                }
+            });
+
+            ui.statTotal.textContent = keys.length;
+            ui.statPublicados.textContent = publicados;
+            ui.statOcultos.textContent = keys.length - publicados;
+            ui.statCorredores.textContent = totalAtletas.toLocaleString();
+            ui.statConResultados.textContent = conResultados;
+            ui.statDistanciasGlobal.textContent = distanciasActivas.size;
+            ui.statDuplicadosGlobal.textContent = duplicadosGlobales;
+            ui.statErroresGlobal.textContent = erroresGlobales;
+        }
+
+        function renderEventsList() {
+            const query = ui.buscador.value.toLowerCase().trim();
+            const filtroEstado = ui.filtroEstado.value;
+            filteredKeys = Object.keys(catalogoEventos).filter(function(eventKey) {
+                const view = getEventView(eventKey);
+                const matchesText = eventKey.toLowerCase().includes(query) || view.nombre.toLowerCase().includes(query);
+                if (!matchesText) return false;
+                if (filtroEstado === 'CON_RESULTADOS') return view.hasResultados;
+                if (filtroEstado === 'ESPERANDO') return !view.hasResultados;
+                if (filtroEstado === 'PUBLICADOS') return view.publicado;
+                if (filtroEstado === 'OCULTOS') return !view.publicado;
+                return true;
+            });
+
+            filteredKeys.sort(function(a, b) {
+                const dateA = (catalogoEventos[a] && catalogoEventos[a].fecha) || '';
+                const dateB = (catalogoEventos[b] && catalogoEventos[b].fecha) || '';
+                return dateB.localeCompare(dateA);
+            });
+
+            const totalPages = Math.max(1, Math.ceil(filteredKeys.length / ITEMS_PER_PAGE));
+            if (currentPage > totalPages) {
+                currentPage = totalPages;
+            }
+
+            const start = (currentPage - 1) * ITEMS_PER_PAGE;
+            const end = start + ITEMS_PER_PAGE;
+            const pageKeys = filteredKeys.slice(start, end);
+
+            ui.paginationText.textContent = filteredKeys.length ? `${start + 1} - ${Math.min(end, filteredKeys.length)} de ${filteredKeys.length}` : '0 - 0 de 0';
+            ui.btnAnt.disabled = currentPage === 1;
+            ui.btnSig.disabled = currentPage >= totalPages || filteredKeys.length === 0;
+
+            if (!pageKeys.length) {
+                ui.eventosContainer.className = 'p-8 text-center text-gray-500';
+                ui.eventosContainer.innerHTML = '<div>No hay eventos</div>';
+                return;
+            }
+
+            // Reset container classes for grid layout
+            ui.eventosContainer.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6';
+            
+            let html = '';
+            pageKeys.forEach(function(eventKey) {
+                const view = getEventView(eventKey);
+                const distanceText = view.distancias.length ? view.distancias.join(', ') : 'Sin distancias';
+                
+                // Generate gradient backgrounds based on event key hash
+                const gradients = [
+                    'from-pink-500 via-purple-500 to-indigo-500',
+                    'from-blue-500 via-cyan-500 to-teal-500',
+                    'from-purple-500 via-pink-500 to-red-500',
+                    'from-green-500 via-teal-500 to-cyan-500',
+                    'from-orange-500 via-pink-500 to-red-500',
+                    'from-indigo-500 via-purple-500 to-pink-500'
+                ];
+                const gradientIndex = eventKey.charCodeAt(0) % gradients.length;
+                const gradient = gradients[gradientIndex];
+                
+                const backgroundStyle = view.imagen_url 
+                    ? `background-image: url('${escapeHtml(view.imagen_url)}'); background-size: cover; background-position: center;`
+                    : `background: linear-gradient(135deg, var(--tw-gradient-stops)); --tw-gradient-from: rgb(255 0 127 / 0.8); --tw-gradient-to: rgb(0 150 255 / 0.8);`;
+                
+                html += `
+                    <div class="evento-card group relative overflow-hidden rounded-3xl border border-gray-200 dark:border-gray-800 shadow-lg hover:shadow-2xl transition-all duration-300 h-64 cursor-pointer" onclick="editarEvento('${escapeHtml(eventKey)}')" style="min-height: 280px;">
+                        <!-- Background Image/Gradient -->
+                        <div class="absolute inset-0 bg-gradient-to-b ${gradient} opacity-70" style="${backgroundStyle}"></div>
+                        
+                        <!-- Overlay gradient -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                        
+                        <!-- Top Badges -->
+                        <div class="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-10">
+                            <div class="flex flex-col gap-2">
+                                <div class="bg-gray-900/70 backdrop-blur-sm border border-gray-700/50 rounded-xl px-3 py-2 text-xs font-bold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-clock text-amber-400"></i>
+                                    <span>Actualizado hace recientemente</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                ${view.publicado ? `<div class="bg-green-500/90 backdrop-blur-sm rounded-xl px-3 py-2 text-xs font-bold text-white flex items-center gap-1"><i class="fa-solid fa-check-circle"></i> Publicado</div>` : `<div class="bg-red-500/90 backdrop-blur-sm rounded-xl px-3 py-2 text-xs font-bold text-white flex items-center gap-1"><i class="fa-solid fa-eye-slash"></i> Oculto</div>`}
+                            </div>
+                        </div>
+                        
+                        <!-- R Logo -->
+                        <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
+                            <div class="w-14 h-14 rounded-full bg-white/10 backdrop-blur-md border-2 border-white/30 flex items-center justify-center text-2xl font-black text-white">
+                                <span>R</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Athletes Counter -->
+                        <div class="absolute bottom-0 left-0 rounded-tr-2xl bg-gray-900/90 backdrop-blur-sm border-t border-r border-gray-700/50 px-4 py-3">
+                            <p class="text-xs font-bold uppercase text-gray-300 tracking-wide">Atletas registrados</p>
+                            <p class="text-2xl font-black text-white">${view.totalAtletas}</p>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div class="absolute inset-0 p-6 flex flex-col justify-end z-10">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-black text-white leading-tight truncate">${escapeHtml(view.nombre)}</h3>
+                                </div>
+                            </div>
+                            
+                            <!-- Event Info -->
+                            <div class="space-y-2 mb-3">
+                                <div class="flex items-center gap-2 text-sm text-white/90">
+                                    <i class="fa-solid fa-calendar text-brand"></i>
+                                    <span>${escapeHtml(view.fecha || 'Sin fecha')}</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-sm text-white/90">
+                                    <i class="fa-solid fa-map-pin text-brand"></i>
+                                    <span>${escapeHtml(distanceText)}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Stats Row -->
+                            <div class="flex flex-wrap gap-3 mb-3 text-xs font-bold text-white/80">
+                                ${view.hasResultados ? `
+                                    <span class="bg-green-500/30 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">
+                                        <i class="fa-solid fa-check"></i> Sesiones ${view.llegados}
+                                    </span>
+                                ` : ''}
+                                <span class="bg-cyan-500/30 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">
+                                    <i class="fa-solid fa-users"></i> Visitantes ${view.totalAtletas}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Hover Actions -->
+                        <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3 z-20">
+                            <button onclick="editarEvento('${escapeHtml(eventKey)}'); event.stopPropagation();" class="bg-brand hover:bg-cyan-300 text-dark px-4 py-2 rounded-xl text-sm font-black transition">
+                                <i class="fa-solid fa-pen mr-2"></i> Editar
+                            </button>
+                            <button onclick="verEvento('${escapeHtml(eventKey)}'); event.stopPropagation();" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-xl text-sm font-black transition backdrop-blur">
+                                <i class="fa-solid fa-arrow-up-right-from-square mr-2"></i> Ver
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            ui.eventosContainer.innerHTML = html;
+        }
+
+        function buildFieldConfig(campoConfig) {
+            const config = campoConfig || { x: 50, y: 50, size: 20, color: '#000000', align: 'center', font: 'Arial' };
+            return {
+                x: config.x != null ? config.x : 50,
+                y: config.y != null ? config.y : 50,
+                size: config.size != null ? config.size : 20,
+                color: config.color || '#000000',
+                align: config.align || 'center',
+                font: config.font || 'Arial'
+            };
+        }
+
+        function renderDiplomaFields(fields) {
+            const baseFields = ['nombre', 'tiempo', 'posGeneral', 'posCategoria', 'categoria', 'distancia', 'evento', 'fecha'];
+            ui.camposConfig.innerHTML = baseFields.map(function(fieldName) {
+                const config = buildFieldConfig(fields[fieldName]);
+                return `
+                    <div class="bg-white dark:bg-card p-3 rounded-xl border border-gray-200 dark:border-gray-700">
+                        <p class="text-xs font-black uppercase text-gray-500 mb-2">${escapeHtml(fieldName)}</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="number" data-campo="${escapeHtml(fieldName)}" data-prop="x" value="${escapeHtml(config.x)}" class="text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-dark px-2 py-2" placeholder="X%">
+                            <input type="number" data-campo="${escapeHtml(fieldName)}" data-prop="y" value="${escapeHtml(config.y)}" class="text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-dark px-2 py-2" placeholder="Y%">
+                            <input type="number" data-campo="${escapeHtml(fieldName)}" data-prop="size" value="${escapeHtml(config.size)}" class="text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-dark px-2 py-2" placeholder="px">
+                            <input type="color" data-campo="${escapeHtml(fieldName)}" data-prop="color" value="${escapeHtml(config.color)}" class="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent">
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function collectDiplomaFields() {
+            const fields = {};
+            ui.camposConfig.querySelectorAll('[data-campo]').forEach(function(input) {
+                const fieldName = input.dataset.campo;
+                const prop = input.dataset.prop;
+                if (!fields[fieldName]) {
+                    fields[fieldName] = buildFieldConfig({});
+                }
+                fields[fieldName][prop] = input.type === 'color' ? input.value : input.value;
+            });
+            return fields;
+        }
+
+        function updateDiplomaPreview() {
+            const url = ui.diplomaUrl.value.trim();
+            if (!url) {
+                ui.previewDiploma.innerHTML = '<p class="text-gray-500 text-sm">Carga una plantilla para ver el preview</p>';
+                return;
+            }
+            ui.previewDiploma.innerHTML = `<img src="${escapeHtml(url)}" class="w-full h-full object-contain" onerror="this.onerror=null;this.parentElement.innerHTML='&lt;p class=&quot;text-red-500 text-sm&quot;&gt;No se pudo cargar la imagen&lt;/p&gt;'">`;
+        }
+
+        async function loadEventStats(eventKey) {
+            if (!eventKey) {
+                resetEventStats();
+                return;
+            }
+
+            const resultados = await YairStore.loadResultadosEvento(eventKey);
+            const record = await YairStore.cacheLoadEvento(eventKey);
+            if (!resultados || !record) {
+                resetEventStats();
+                return;
+            }
+
+            const stats = mergeEventStats(record, resultados);
+            const distanceKeys = Object.keys(resultados);
+            ui.statsGenero.textContent = formatCountMap(stats.porGenero, 'Sin datos');
+            ui.statsCategoria.textContent = formatCountMap(stats.porCategoria, 'Sin datos', 4);
+            ui.statsTotal.textContent = `${stats.totalAtletas || 0} corredores | ${stats.sinTiempo || 0} sin tiempo`;
+            ui.statsFinalizacion.textContent = `${stats.llegados || 0} / ${stats.totalAtletas || 0} (${stats.finalizacionPct || 0}%)`;
+            ui.statsDistancias.textContent = distanceKeys.length ? `${distanceKeys.length} activas | ${distanceKeys.join(', ')}` : 'Sin datos';
+            ui.statsPromedio.textContent = stats.promedioTiempo || '--:--:--';
+            ui.statsMejor.textContent = stats.mejorTiempo || '--:--:--';
+            ui.statsImportacion.textContent = formatDateTime(record.importedAt);
+            ui.statsArchivo.textContent = `${record.originalFileName || 'Sin nombre'} | hash ${(record.sourceHash || '').slice(0, 8) || 'n/a'}`;
+            ui.statsAlertas.textContent = `${stats.duplicadosCount || 0} duplicados | ${stats.totalErrores || 0} errores | ${stats.filasValidas || stats.totalAtletas || 0} filas validas`;
+            ui.statsPorDistancia.textContent = Object.entries(stats.porDistancia || {}).map(function(entry) {
+                const distanceStats = entry[1] || {};
+                const best = distanceStats.mejorTiempo ? ` | mejor ${distanceStats.mejorTiempo}` : '';
+                return `${entry[0]}: ${distanceStats.llegados || 0}/${distanceStats.total || 0}${best}`;
+            }).join(' | ') || 'Sin datos';
+        }
+
+        async function loadSavedCsvState(eventKey) {
+            if (!eventKey) {
+                renderEmptyCsvState('Guarda el evento y luego valida un CSV.');
+                return;
+            }
+
+            const record = await YairStore.cacheLoadEvento(eventKey);
+            if (!record) {
+                renderEmptyCsvState('Sube un archivo CSV para validar y guardar.');
+                return;
+            }
+
+            renderCsvRecord(record);
+        }
+
+        async function refreshData() {
+            try {
+                catalogoEventos = await YairStore.loadEventosCatalogo();
+                estadoEventos = await YairStore.loadEstadoEventos();
+                recordsResultados = await YairStore.cacheListEventos();
+                recordMap = {};
+                recordsResultados.forEach(function(record) {
+                    recordMap[record.eventoKey] = record;
+                });
+                renderDashboard();
+                renderEventsList();
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+                ui.eventosContainer.className = 'p-8 text-center text-red-500';
+                ui.eventosContainer.innerHTML = '<div>No fue posible cargar los datos locales.</div>';
+            }
+        }
+
+        async function persistEventBase() {
+            const formData = getFormEventData();
+            if (!formData.eventoKey) {
+                throw new Error('Debes definir un eventoKey antes de guardar.');
+            }
+
+            const existing = catalogoEventos[formData.eventoKey] || {};
+            const saved = await YairStore.saveEventoConfig(formData.eventoKey, Object.assign({}, existing, formData));
+            const currentState = getStateForEvent(saved.eventoKey);
+            currentState.publicado = getSelectedPublished();
+            currentState.fecha_publicacion = currentState.publicado ? (currentState.fecha_publicacion || new Date().toISOString()) : '';
+            await YairStore.saveEstadoEvento(saved.eventoKey, currentState);
+
+            activeEventKey = saved.eventoKey;
+            await refreshData();
+            setEventKeyReadonly(true);
+            ui.eventoHint.textContent = 'Evento guardado localmente. Ya puedes publicar cambios y resultados.';
+            return saved;
+        }
+
+        async function openEventModal(eventKey) {
+            activeEventKey = eventKey || null;
+            clearCsvViews();
+            pendingImport = null;
+
+            const config = eventKey ? (catalogoEventos[eventKey] || {}) : {};
+            const state = eventKey ? getStateForEvent(eventKey) : { publicado: true, diploma: { plantilla_url: '', pie: '', campos: {} }, chuspic_url: '' };
+
+            ui.modalTitulo.textContent = eventKey ? `Editar: ${normalizeEventName(eventKey, config)}` : 'Nuevo evento';
+            ui.eventoKey.value = eventKey || '';
+            ui.eventoNombre.value = config.nombre || '';
+            ui.eventoFecha.value = config.fecha || '';
+            ui.eventoImagen.value = config.imagen_url || '';
+            ui.eventoDistancias.value = (config.distancias || []).join(', ');
+            ui.eventoHint.textContent = eventKey ? 'Edita la configuracion y guarda cada bloque cuando termines.' : 'Define el eventoKey, fecha y nombre para crear el evento.';
+            setEventKeyReadonly(!!eventKey);
+            syncForceDistanceControl();
+
+            document.querySelector(`input[name="estado-publicar"][value="${state.publicado}"]`).checked = true;
+            ui.diplomaUrl.value = (state.diploma && state.diploma.plantilla_url) || '';
+            ui.diplomaPie.value = (state.diploma && state.diploma.pie) || '';
+            ui.chuspicUrl.value = state.chuspic_url || '';
+            renderDiplomaFields((state.diploma && state.diploma.campos) || {});
+            updateDiplomaPreview();
+            await loadEventStats(eventKey);
+            await loadSavedCsvState(eventKey);
+            ui.modal.classList.remove('hidden');
+        }
+
+        function closeEventModal() {
+            ui.modal.classList.add('hidden');
+            activeEventKey = null;
+            pendingImport = null;
+            clearCsvViews();
+        }
+
+        async function savePublicationState() {
+            let targetKey = activeEventKey || getFormEventData().eventoKey;
+            if (!targetKey) {
+                alert('Guarda primero los datos base del evento.');
+                return;
+            }
+            if (!catalogoEventos[targetKey]) {
+                const saved = await persistEventBase();
+                targetKey = saved.eventoKey;
+            }
+            const state = getStateForEvent(targetKey);
+            state.publicado = getSelectedPublished();
+            state.fecha_publicacion = state.publicado ? new Date().toISOString() : '';
+            await YairStore.saveEstadoEvento(targetKey, state);
+            await refreshData();
+            alert('Estado de publicacion guardado.');
+        }
+
+        async function saveDiplomaConfig() {
+            let targetKey = activeEventKey || getFormEventData().eventoKey;
+            if (!targetKey) {
+                alert('Guarda primero los datos base del evento.');
+                return;
+            }
+            if (!catalogoEventos[targetKey]) {
+                const saved = await persistEventBase();
+                targetKey = saved.eventoKey;
+            }
+            const state = getStateForEvent(targetKey);
+            state.diploma = {
+                plantilla_url: ui.diplomaUrl.value.trim(),
+                pie: ui.diplomaPie.value.trim(),
+                campos: collectDiplomaFields()
+            };
+            await YairStore.saveEstadoEvento(targetKey, state);
+            await refreshData();
+            alert('Configuracion de diploma guardada.');
+        }
+
+        async function saveChuspicConfig() {
+            let targetKey = activeEventKey || getFormEventData().eventoKey;
+            if (!targetKey) {
+                alert('Guarda primero los datos base del evento.');
+                return;
+            }
+            if (!catalogoEventos[targetKey]) {
+                const saved = await persistEventBase();
+                targetKey = saved.eventoKey;
+            }
+            const state = getStateForEvent(targetKey);
+            state.chuspic_url = ui.chuspicUrl.value.trim();
+            await YairStore.saveEstadoEvento(targetKey, state);
+            await refreshData();
+            alert('URL de Chuspic guardada.');
+        }
+
+        async function validateCsvText(text, sourceName) {
+            const formData = getFormEventData();
+            if (!formData.eventoKey) {
+                alert('Define primero el eventoKey para validar el CSV.');
+                return;
+            }
+
+            ui.csvStatus.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Validando CSV...';
+            ui.csvMeta.textContent = sourceName;
+            const preview = await YairStore.parseResultadosCsvForEvento(formData.eventoKey, text, sourceName, buildImportOptions(formData));
+            pendingImport = preview;
+            renderCsvPreview(preview);
+
+            if (preview.duplicates && preview.duplicates.length) {
+                let summary = `DORSALES DUPLICADOS DETECTADOS (${preview.duplicates.length} grupos):\n\n`;
+                preview.duplicates.slice(0, 5).forEach(function(group) {
+                    summary += `- ${group.distancia} | dorsal ${group.dorsal}\n`;
+                    (group.registros || []).forEach(function(record) {
+                        summary += `   fila ${record.linea}: ${record.nombre} - ${record.tiempo}\n`;
+                    });
+                });
+                if (preview.duplicates.length > 5) {
+                    summary += `\n...y ${preview.duplicates.length - 5} grupos mas`;
+                }
+                alert(summary);
+            }
+        }
+
+        async function validateCsvFile(file) {
+            const text = await file.text();
+            // Abrir modal de mapping en lugar de validar directamente
+            openColumnMappingModal(text, file.name);
+        }
+
+        async function continueCsvImportWithMappedData(mappedRows, fileName) {
+            /**
+             * Continúa con el import del CSV usando los datos ya mapeados
+             * Los datos transformados vienen como array de objetos con las claves
+             * correspondientes a los campos del sistema (bib, name, race_time, etc)
+             */
+            const formData = getFormEventData();
+            if (!formData.eventoKey) {
+                alert('Define primero el eventoKey para validar el CSV.');
+                return;
+            }
+
+            ui.csvStatus.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Procesando CSV mapeado...';
+            ui.csvMeta.textContent = fileName;
+
+            try {
+                // Aquí es donde la magia sucede:
+                // Los datos mappedRows ya están transformados, así que debemos
+                // convertirlos a un formato que el parser actual pueda procesar.
+                //
+                // El parser actual espera un CSV con columnas específicas.
+                // Convertimos los objetos mapeados de vuelta a CSV interno.
+
+                const internalCsv = convertMappedRowsToInternalCsv(mappedRows);
+
+                // Llamar a la validación normal, pero con el CSV ya transformado
+                await validateCsvText(internalCsv, fileName);
+            } catch (error) {
+                console.error('Error procesando datos mapeados:', error);
+                renderEmptyCsvState(error.message);
+                setCsvBanner('error', error.message);
+                alert('Error al procesar los datos mapeados: ' + error.message);
+            }
+        }
+
+        function convertMappedRowsToInternalCsv(mappedRows) {
+            /**
+             * Convierte los datos mapeados (objetos) de vuelta a formato CSV interno
+             * que el parser actual pueda entender.
+             *
+             * El parser actual busca columnas con nombres específicos como:
+             * dorsal, nombre, distancia, tiempo, genero, categoria, etc.
+             *
+             * Los datos mapeados tienen campos del sistema:
+             * bib, name, race_time, gender, category, distance, etc.
+             */
+
+            // Headers (usando los nombres que el parser actual espera)
+            const headers = [
+                'dorsal',           // desde bib
+                'nombre',           // desde name
+                'distancia',        // desde distance
+                'tiempo_oficial',   // desde race_time
+                'ritmo',            // desde pace
+                'genero',           // desde gender
+                'categoria',        // desde category
+                'global',           // desde global_position
+                'genero_pos',       // desde gender_position
+                'categoria_pos'     // desde category_position
+            ];
+
+            // Mapeo inverso: de campos del sistema a nombres de columnas esperadas
+            const fieldMapping = {
+                bib: 'dorsal',
+                name: 'nombre',
+                distance: 'distancia',
+                race_time: 'tiempo_oficial',
+                pace: 'ritmo',
+                gender: 'genero',
+                category: 'categoria',
+                global_position: 'global',
+                gender_position: 'genero_pos',
+                category_position: 'categoria_pos'
+            };
+
+            // Convertir a CSV
+            let csvContent = headers.map(h => `"${h}"`).join(';') + '\n';
+
+            mappedRows.forEach(function(row) {
+                const cells = [];
+
+                headers.forEach(function(header) {
+                    // Encontrar el campo correspondiente
+                    let value = '';
+                    for (var systemField in fieldMapping) {
+                        if (fieldMapping[systemField] === header && row[systemField]) {
+                            value = row[systemField];
+                            break;
+                        }
+                    }
+                    // Escapar comillas dobles en el valor
+                    const escaped = String(value).replace(/"/g, '""');
+                    cells.push(`"${escaped}"`);
+                });
+
+                csvContent += cells.join(';') + '\n';
+            });
+
+            return csvContent;
+        }
+
+        async function loadDemoCsv(type) {
+            const sourceType = type === 'errores' ? 'errores' : 'normal';
+            const sourceName = sourceType === 'errores'
+                ? 'demo-validacion-admin-2026.csv'
+                : 'demo-trail-multidistancia-2026.csv';
+            const response = await fetch(getDemoCsvUrl(sourceType));
+            if (!response.ok) {
+                throw new Error('No fue posible cargar el CSV demo.');
+            }
+            const text = await response.text();
+            await validateCsvText(text, sourceName);
+        }
+
+        async function savePendingCsv() {
+            if (!pendingImport) return;
+
+            const savedEvent = await persistEventBase();
+            const mergedDistances = sortDistanceLabels(
+                Array.from(new Set([].concat(catalogoEventos[savedEvent.eventoKey].distancias || [], pendingImport.stats.distancias || [])))
+            );
+
+            await YairStore.saveEventoConfig(savedEvent.eventoKey, Object.assign({}, catalogoEventos[savedEvent.eventoKey], {
+                distancias: mergedDistances
+            }));
+
+            const record = await YairStore.cacheSaveEvento(savedEvent.eventoKey, pendingImport);
+            pendingImport = null;
+            await refreshData();
+            activeEventKey = savedEvent.eventoKey;
+            await loadEventStats(savedEvent.eventoKey);
+            renderCsvRecord(record);
+            alert(`Resultados guardados en cache local para "${savedEvent.eventoKey}". Abre las paginas publicas desde este mismo origen: ${getRuntimeScopeLabel()}`);
+        }
+
+        async function exportEventJson() {
+            const targetKey = activeEventKey || getFormEventData().eventoKey;
+            if (!targetKey) {
+                alert('No hay un evento activo para exportar.');
+                return;
+            }
+
+            const record = await YairStore.cacheLoadEvento(targetKey);
+            if (record) {
+                downloadJsonFile(`${targetKey}-resultados.json`, record);
+                return;
+            }
+
+            if (pendingImport) {
+                downloadJsonFile(`${targetKey}-preview.json`, pendingImport);
+                return;
+            }
+
+            alert('Este evento aun no tiene resultados cacheados ni preview disponible.');
+        }
+
+        async function deleteEventCache() {
+            const targetKey = activeEventKey || getFormEventData().eventoKey;
+            if (!targetKey) {
+                alert('No hay un evento activo.');
+                return;
+            }
+            if (!confirm(`¿Borrar los resultados cacheados del evento "${targetKey}"?`)) {
+                return;
+            }
+            await YairStore.cacheDeleteEvento(targetKey);
+            pendingImport = null;
+            await refreshData();
+            await loadEventStats(targetKey);
+            renderEmptyCsvState('Los resultados cacheados fueron eliminados. Puedes validar un nuevo CSV.');
+            alert('Cache de resultados eliminado.');
+        }
+
+        async function deleteLocalEvent() {
+            const targetKey = activeEventKey || getFormEventData().eventoKey;
+            if (!targetKey) {
+                alert('No hay un evento activo.');
+                return;
+            }
+            if (!confirm(`¿Eliminar el evento local "${targetKey}" junto con su estado y resultados?`)) {
+                return;
+            }
+            await YairStore.deleteEventoCompleto(targetKey);
+            pendingImport = null;
+            closeEventModal();
+            await refreshData();
+            alert('Evento local eliminado.');
+        }
+
+        async function exportLocalBackup() {
+            const snapshot = await YairStore.dumpLocalSnapshot();
+            downloadJsonFile(`backup-local-yair-timings-${new Date().toISOString().slice(0, 10)}.json`, snapshot);
+        }
+
+        async function restoreLocalBackupFile(file) {
+            const text = await file.text();
+            let snapshot = null;
+
+            try {
+                snapshot = JSON.parse(text);
+            } catch (error) {
+                throw new Error('El archivo seleccionado no contiene un JSON valido.');
+            }
+
+            const restored = await YairStore.restoreLocalSnapshot(snapshot, { replaceExisting: true });
+            pendingImport = null;
+            closeEventModal();
+            await refreshData();
+            alert(`Backup restaurado. Eventos: ${restored.eventos} | estados: ${restored.estados} | resultados: ${restored.resultados}`);
+        }
+
+        async function clearAllLocalAdminData() {
+            if (!confirm('¿Borrar todos los eventos, estados y resultados guardados localmente en este navegador?')) {
+                return;
+            }
+            await YairStore.clearAllLocalData();
+            pendingImport = null;
+            closeEventModal();
+            await refreshData();
+            alert('Todos los datos locales fueron eliminados.');
+        }
+
+        ui.themeToggle.addEventListener('click', function() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+
+        ui.loginForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const email = document.getElementById('login-user').value.trim();
+            const pass = document.getElementById('login-pass').value;
+            const submitBtn = document.getElementById('login-submit');
+            ui.loginError.classList.add('hidden');
+            ui.loginError.textContent = 'Credenciales incorrectas';
+            if (!email || !pass) {
+                ui.loginError.textContent = 'Ingresa email y contrasena.';
+                ui.loginError.classList.remove('hidden');
+                return;
+            }
+            submitBtn.disabled = true;
+            try {
+                await window.YairSupabase.signIn(email, pass);
+                ui.loginScreen.classList.add('hidden');
+                ui.adminPanel.classList.remove('hidden');
+                await refreshData();
+            } catch (err) {
+                ui.loginError.textContent = err && err.message ? err.message : 'No fue posible iniciar sesion.';
+                ui.loginError.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+
+        ui.logoutBtn.addEventListener('click', async function() {
+            try { await window.YairSupabase.signOut(); } catch (e) {}
+            localStorage.removeItem('yair_admin_session');
+            location.reload();
+        });
+
+        ui.buscador.addEventListener('input', function() {
+            currentPage = 1;
+            renderEventsList();
+        });
+
+        ui.filtroEstado.addEventListener('change', function() {
+            currentPage = 1;
+            renderEventsList();
+        });
+
+        ui.btnAnt.addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage -= 1;
+                renderEventsList();
+            }
+        });
+
+        ui.btnSig.addEventListener('click', function() {
+            const totalPages = Math.max(1, Math.ceil(filteredKeys.length / ITEMS_PER_PAGE));
+            if (currentPage < totalPages) {
+                currentPage += 1;
+                renderEventsList();
+            }
+        });
+
+        ui.btnNuevoEvento.addEventListener('click', function() {
+            openEventModal(null);
+        });
+
+        ui.cerrarModal.addEventListener('click', closeEventModal);
+        ui.eventoDistancias.addEventListener('input', syncForceDistanceControl);
+        ui.btnAutokey.addEventListener('click', function() {
+            const source = ui.eventoNombre.value.trim() || ui.eventoKey.value.trim();
+            if (!source) {
+                alert('Escribe primero el nombre del evento para generar el eventoKey.');
+                return;
+            }
+            ui.eventoKey.value = YairStore.buildEventoKeyFromName(source);
+        });
+        ui.btnGuardarEvento.addEventListener('click', async function() {
+            try {
+                const saved = await persistEventBase();
+                await openEventModal(saved.eventoKey);
+                alert('Evento guardado correctamente.');
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        ui.btnGuardarEstado.addEventListener('click', savePublicationState);
+        ui.btnGuardarDiploma.addEventListener('click', saveDiplomaConfig);
+        ui.btnGuardarChuspic.addEventListener('click', saveChuspicConfig);
+        ui.btnExportarJsonEvento.addEventListener('click', exportEventJson);
+        ui.btnEliminarCacheEvento.addEventListener('click', deleteEventCache);
+        ui.btnEliminarEventoLocal.addEventListener('click', deleteLocalEvent);
+        ui.diplomaUrl.addEventListener('input', updateDiplomaPreview);
+        ui.btnExportarBackup.addEventListener('click', exportLocalBackup);
+        ui.btnImportarBackup.addEventListener('click', function() {
+            ui.backupInput.click();
+        });
+        ui.btnRecargarDatos.addEventListener('click', refreshData);
+        ui.btnLimpiarDatos.addEventListener('click', async function() {
+            try {
+                await clearAllLocalAdminData();
+            } catch (error) {
+                alert('No fue posible limpiar los datos locales: ' + error.message);
+            }
+        });
+        ui.btnCargarDemoCsv.addEventListener('click', async function() {
+            try {
+                await loadDemoCsv();
+            } catch (error) {
+                console.error('Error cargando demo CSV:', error);
+                renderEmptyCsvState(error.message);
+                setCsvBanner('error', error.message);
+                alert('No fue posible cargar el CSV demo: ' + error.message);
+            }
+        });
+        ui.btnCargarDemoErrores.addEventListener('click', async function() {
+            try {
+                await loadDemoCsv('errores');
+            } catch (error) {
+                console.error('Error cargando demo CSV con errores:', error);
+                renderEmptyCsvState(error.message);
+                setCsvBanner('error', error.message);
+                alert('No fue posible cargar el CSV demo con errores: ' + error.message);
+            }
+        });
+
+        ui.btnValidarCsv.addEventListener('click', function() {
+            if (!ui.eventoKey.value.trim()) {
+                alert('Define primero el eventoKey para validar el CSV.');
+                return;
+            }
+            ui.csvInput.click();
+        });
+
+        ui.csvInput.addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                await validateCsvFile(file);
+            } catch (error) {
+                console.error('Error validando CSV:', error);
+                renderEmptyCsvState(error.message);
+                setCsvBanner('error', error.message);
+                alert('Error al validar CSV: ' + error.message);
+            }
+            ui.csvInput.value = '';
+        });
+
+        ui.backupInput.addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!confirm('Esta accion reemplazara los eventos, estados y resultados locales del navegador actual. ¿Deseas continuar?')) {
+                ui.backupInput.value = '';
+                return;
+            }
+
+            try {
+                await restoreLocalBackupFile(file);
+            } catch (error) {
+                console.error('Error restaurando backup:', error);
+                alert('No fue posible restaurar el backup: ' + error.message);
+            }
+
+            ui.backupInput.value = '';
+        });
+
+        ui.btnGuardarCsv.addEventListener('click', async function() {
+            try {
+                await savePendingCsv();
+            } catch (error) {
+                console.error('Error guardando cache:', error);
+                alert('No fue posible guardar el cache: ' + error.message);
+            }
+        });
+
+        // =====================================================================
+        // MODAL DE MAPPING DE COLUMNAS
+        // =====================================================================
+        let pendingCsvData = {
+            text: null,
+            fileName: null,
+            analysis: null,
+            currentMapping: null
+        };
+
+        function openColumnMappingModal(csvText, fileName) {
+            pendingCsvData.text = csvText;
+            pendingCsvData.fileName = fileName;
+
+            try {
+                // Analizar CSV
+                const hasHeaders = ui.mappingHasHeaders.checked;
+                pendingCsvData.analysis = ColumnMapping.analyzeCSV(csvText, hasHeaders);
+
+                // Mostrar preview
+                renderMappingPreview();
+
+                // Generar controls de mapping
+                generateMappingControls();
+
+                // Auto-mapping inicial
+                handleAutoMapping();
+
+                // Mostrar modal
+                ui.mappingModal.classList.remove('hidden');
+            } catch (error) {
+                console.error('Error abriendo modal de mapping:', error);
+                alert('Error al procesar el CSV: ' + error.message);
+            }
+        }
+
+        function closeMappingModal() {
+            ui.mappingModal.classList.add('hidden');
+            pendingCsvData = { text: null, fileName: null, analysis: null, currentMapping: null };
+        }
+
+        function renderMappingPreview() {
+            const analysis = pendingCsvData.analysis;
+
+            // Limpiar filas anteriores
+            ui.csvPreviewHeadersRow.innerHTML = '';
+            ui.csvPreviewDataRows.innerHTML = '';
+
+            // Headers
+            analysis.headers.forEach(function(header, idx) {
+                const th = document.createElement('th');
+                th.className = 'px-2 py-2 text-left text-xs font-bold bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700';
+                th.textContent = header || `(Columna ${idx})`;
+                ui.csvPreviewHeadersRow.appendChild(th);
+            });
+
+            // Datos (primeras 5 filas)
+            analysis.preview.forEach(function(row) {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-200 dark:border-gray-700';
+
+                row.forEach(function(cell) {
+                    const td = document.createElement('td');
+                    td.className = 'px-2 py-2 text-xs border border-gray-200 dark:border-gray-700';
+                    td.textContent = cell || '(vacío)';
+                    tr.appendChild(td);
+                });
+
+                ui.csvPreviewDataRows.appendChild(tr);
+            });
+        }
+
+        function generateMappingControls() {
+            const analysis = pendingCsvData.analysis;
+            const sistemFields = ColumnMapping.getSistemaFields();
+
+            ui.mappingControls.innerHTML = '';
+
+            analysis.headers.forEach(function(header, columnIndex) {
+                const div = document.createElement('div');
+                div.className = 'flex gap-3 items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3';
+
+                // Nombre de la columna
+                const label = document.createElement('div');
+                label.className = 'flex-shrink-0 w-24';
+                label.innerHTML = `<span class="text-xs font-bold text-gray-600 dark:text-gray-400">Col ${columnIndex}</span><br><span class="text-sm font-black text-gray-700 dark:text-gray-200 truncate">${header || '(vacío)'}</span>`;
+
+                // Select para asignar
+                const select = document.createElement('select');
+                select.className = 'flex-1 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand mapping-select';
+                select.dataset.columnIndex = columnIndex;
+
+                // Opción "Ignorar"
+                const ignoreOption = document.createElement('option');
+                ignoreOption.value = 'ignore';
+                ignoreOption.textContent = '👉 Ignorar esta columna';
+                select.appendChild(ignoreOption);
+
+                // Opciones de campos del sistema
+                for (var fieldName in sistemFields) {
+                    const fieldConfig = sistemFields[fieldName];
+                    const option = document.createElement('option');
+                    option.value = fieldName;
+                    const required = fieldConfig.required ? ' *' : '';
+                    option.textContent = fieldConfig.label + required;
+                    select.appendChild(option);
+                }
+
+                // Asignar valor del mapping actual
+                if (pendingCsvData.currentMapping && pendingCsvData.currentMapping[columnIndex]) {
+                    select.value = pendingCsvData.currentMapping[columnIndex];
+                }
+
+                // Evento para actualizar validación
+                select.addEventListener('change', function() {
+                    updateMappingValidation();
+                });
+
+                div.appendChild(label);
+                div.appendChild(select);
+                ui.mappingControls.appendChild(div);
+            });
+        }
+
+        function updateMappingValidation() {
+            // Recolectar mapping actual
+            const selects = document.querySelectorAll('.mapping-select');
+            const mapping = {};
+
+            selects.forEach(function(select) {
+                const columnIndex = parseInt(select.dataset.columnIndex);
+                mapping[columnIndex] = select.value;
+            });
+
+            pendingCsvData.currentMapping = mapping;
+
+            // Validar
+            const validation = ColumnMapping.validateMapping(mapping);
+
+            // Mostrar errores
+            if (!validation.isValid) {
+                ui.mappingValidationBox.classList.remove('hidden');
+                ui.mappingValidationErrors.innerHTML = '';
+                validation.errors.forEach(function(error) {
+                    const li = document.createElement('li');
+                    li.textContent = error;
+                    ui.mappingValidationErrors.appendChild(li);
+                });
+                ui.btnApplyMapping.disabled = true;
+            } else {
+                ui.mappingValidationBox.classList.add('hidden');
+                ui.mappingValidationErrors.innerHTML = '';
+                ui.btnApplyMapping.disabled = false;
+            }
+
+            // Mostrar resumen de campos mapeados
+            const mappedFieldsCount = validation.mappedFields ? validation.mappedFields.length : 0;
+            ui.mappingSummary.textContent = `${mappedFieldsCount} campo(s) mapeado(s): ${validation.mappedFields ? validation.mappedFields.join(', ') : 'ninguno'}`;
+        }
+
+        function handleAutoMapping() {
+            const analysis = pendingCsvData.analysis;
+            pendingCsvData.currentMapping = analysis.autoMapping;
+
+            // Actualizar los selects
+            const selects = document.querySelectorAll('.mapping-select');
+            selects.forEach(function(select) {
+                const columnIndex = parseInt(select.dataset.columnIndex);
+                select.value = analysis.autoMapping[columnIndex] || 'ignore';
+            });
+
+            updateMappingValidation();
+        }
+
+        function handleApplyMapping() {
+            if (!pendingCsvData.currentMapping || !pendingCsvData.text) {
+                alert('No hay mapping válido para aplicar.');
+                return;
+            }
+
+            try {
+                // Transformar el CSV usando el mapping
+                const hasHeaders = ui.mappingHasHeaders.checked;
+                const transformedData = ColumnMapping.transformCSV(
+                    pendingCsvData.text,
+                    pendingCsvData.currentMapping,
+                    hasHeaders
+                );
+
+                // Cerrar modal
+                closeMappingModal();
+
+                // Continuar con la validación del CSV (ahora con datos transformados)
+                // NOTA: Aquí se conecta con la lógica existente
+                continueCsvImportWithMappedData(transformedData, pendingCsvData.fileName);
+
+            } catch (error) {
+                console.error('Error aplicando mapping:', error);
+                alert('Error al aplicar el mapping: ' + error.message);
+            }
+        }
+
+        // Event Listeners del Modal
+        ui.mappingHasHeaders.addEventListener('change', function() {
+            if (pendingCsvData.text) {
+                const hasHeaders = this.checked;
+                pendingCsvData.analysis = ColumnMapping.analyzeCSV(pendingCsvData.text, hasHeaders);
+                renderMappingPreview();
+                generateMappingControls();
+                if (pendingCsvData.currentMapping) {
+                    handleAutoMapping();
+                } else {
+                    updateMappingValidation();
+                }
+            }
+        });
+
+        ui.btnCloseMappingModal.addEventListener('click', closeMappingModal);
+        ui.btnCancelMapping.addEventListener('click', closeMappingModal);
+
+        ui.btnAutoMapping.addEventListener('click', function() {
+            if (pendingCsvData.analysis) {
+                handleAutoMapping();
+            }
+        });
+
+        ui.btnApplyMapping.addEventListener('click', handleApplyMapping);
+
+        window.editarEvento = function(eventKey) {
+            openEventModal(eventKey);
+        };
+
+        window.verEvento = function(eventKey) {
+            window.open(`resultados.html?evento=${eventKey}`, '_blank');
+        };
+
+        (async function bootAdminAuth() {
+            try {
+                const user = await window.YairSupabase.currentUser();
+                if (user) {
+                    ui.loginScreen.classList.add('hidden');
+                    ui.adminPanel.classList.remove('hidden');
+                    await refreshData();
+                }
+            } catch (err) {
+                console.warn('No se pudo verificar sesion:', err);
+            }
+        })();
+
+        window.YairSupabase.onAuthChange(function(payload) {
+            if (payload.event === 'SIGNED_OUT') {
+                ui.adminPanel.classList.add('hidden');
+                ui.loginScreen.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

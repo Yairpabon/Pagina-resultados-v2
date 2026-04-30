@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premiacion | Yair Timings</title>
+    <script>
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#F4C542',
+                        dark: '#0E1525',
+                        card: '#141E33'
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Exo+2:wght@400;600;700;800&display=swap');
+        body { font-family: 'Exo 2', sans-serif; }
+        h1, h2, h3 { font-family: 'Russo One', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-dark text-gray-900 dark:text-white min-h-screen">
+    <div class="bg-gradient-to-br from-card via-dark to-black border-b border-white/10">
+        <nav class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <button id="btn-volver" class="w-11 h-11 rounded-2xl bg-white/10 text-white/70 hover:text-white border border-white/10 transition">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div class="w-12 h-12 rounded-2xl bg-brand/15 text-brand flex items-center justify-center border border-brand/20">
+                    <i class="fa-solid fa-medal text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs uppercase tracking-[0.3em] text-white/40 font-bold">Premiacion</p>
+                    <h1 id="titulo-evento" class="text-2xl md:text-3xl text-white uppercase">Evento</h1>
+                </div>
+            </div>
+        </nav>
+
+        <header class="max-w-7xl mx-auto px-6 pb-10">
+            <p class="text-white/60 max-w-3xl">Podios automaticos por distancia, genero y categoria usando el JSON interno normalizado que se genero desde el CSV del evento.</p>
+        </header>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        <section class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 p-5">
+            <p class="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400 font-bold mb-3">Distancias</p>
+            <div id="contenedor-distancias" class="flex flex-wrap gap-2"></div>
+        </section>
+
+        <section id="estado-vacio" class="hidden bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 p-12 text-center">
+            <div class="w-16 h-16 rounded-full mx-auto mb-4 bg-amber-100 dark:bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                <i class="fa-solid fa-hourglass-half text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-black uppercase mb-3">Esperando resultados</h2>
+            <p class="text-gray-500 dark:text-gray-400">Todavia no hay resultados guardados en cache para este evento.</p>
+        </section>
+
+        <section id="estado-error" class="hidden bg-white dark:bg-card rounded-3xl border border-red-200 dark:border-red-900/40 p-12 text-center">
+            <div class="w-16 h-16 rounded-full mx-auto mb-4 bg-red-100 dark:bg-red-500/10 text-red-500 flex items-center justify-center">
+                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-black uppercase mb-3">No fue posible cargar el evento</h2>
+            <p id="error-texto" class="text-gray-500 dark:text-gray-400"></p>
+        </section>
+
+        <section id="podios-grid" class="hidden grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5"></section>
+    </main>
+
+
+  
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./js/csvParser.js"></script>
+    <script src="./js/supabaseClient.js"></script>
+    <script src="./js/supabaseStore.js"></script>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let eventoActual = urlParams.get('evento') || 'evento-demo';
+        let resultadosEvento = null;
+        let distanciaActiva = null;
+        let podiosPorDistancia = {};
+
+        const ui = {
+            tituloEvento: document.getElementById('titulo-evento'),
+            btnVolver: document.getElementById('btn-volver'),
+            contenedorDistancias: document.getElementById('contenedor-distancias'),
+            estadoVacio: document.getElementById('estado-vacio'),
+            estadoError: document.getElementById('estado-error'),
+            errorTexto: document.getElementById('error-texto'),
+            podiosGrid: document.getElementById('podios-grid')
+        };
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function timeValue(value) {
+            const seconds = YairStore.timeToSortableSeconds(value);
+            return Number.isFinite(seconds) ? seconds : Number.POSITIVE_INFINITY;
+        }
+
+        function renderDistanceButtons() {
+            const distancias = Object.keys(podiosPorDistancia);
+            ui.contenedorDistancias.innerHTML = distancias.map(function(distance) {
+                const active = distance === distanciaActiva;
+                return `
+                    <button data-distance="${escapeHtml(distance)}" class="px-4 py-2 rounded-2xl text-sm font-black uppercase tracking-wide transition ${active ? 'bg-brand text-black' : 'bg-gray-100 dark:bg-dark border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300'}">
+                        ${escapeHtml(distance)}
+                    </button>
+                `;
+            }).join('');
+
+            ui.contenedorDistancias.querySelectorAll('button').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    distanciaActiva = button.dataset.distance;
+                    renderDistanceButtons();
+                    renderPodios();
+                });
+            });
+        }
+
+        function buildPodios() {
+            podiosPorDistancia = {};
+
+            Object.keys(resultadosEvento || {}).forEach(function(distance) {
+                const atletas = Object.keys(resultadosEvento[distance] || {}).map(function(dorsal) {
+                    return Object.assign({ dorsal: dorsal }, resultadosEvento[distance][dorsal]);
+                }).filter(function(atleta) {
+                    return Number.isFinite(timeValue(atleta.tiempo_oficial));
+                });
+
+                atletas.forEach(function(atleta) {
+                    const genero = atleta.genero || '-';
+                    const categoria = atleta.categoria || 'General';
+                    if (!podiosPorDistancia[distance]) podiosPorDistancia[distance] = {};
+                    if (!podiosPorDistancia[distance][genero]) podiosPorDistancia[distance][genero] = {};
+                    if (!podiosPorDistancia[distance][genero][categoria]) podiosPorDistancia[distance][genero][categoria] = [];
+                    podiosPorDistancia[distance][genero][categoria].push(atleta);
+                });
+
+                Object.keys(podiosPorDistancia[distance] || {}).forEach(function(genero) {
+                    Object.keys(podiosPorDistancia[distance][genero] || {}).forEach(function(categoria) {
+                        podiosPorDistancia[distance][genero][categoria].sort(function(a, b) {
+                            return timeValue(a.tiempo_oficial) - timeValue(b.tiempo_oficial);
+                        });
+                        podiosPorDistancia[distance][genero][categoria] = podiosPorDistancia[distance][genero][categoria].slice(0, 3);
+                    });
+                });
+            });
+        }
+
+        function buildPodioRow(position, atleta) {
+            const medalStyles = {
+                1: 'bg-yellow-400 text-black',
+                2: 'bg-gray-300 text-gray-900',
+                3: 'bg-amber-700 text-white'
+            };
+
+            return `
+                <div class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-dark p-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg ${medalStyles[position]}">${position}</div>
+                        <div class="min-w-0">
+                            <p class="font-black text-base truncate">${escapeHtml(atleta.nombre)}</p>
+                            <p class="text-xs uppercase tracking-wide text-gray-500">#${escapeHtml(atleta.dorsal)} • ${escapeHtml(atleta.genero || '-')}</p>
+                            <p class="text-xs text-gray-500 mt-1">${escapeHtml(atleta.tiempo_oficial)} • ritmo ${escapeHtml(atleta.ritmo || '--:--')}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPodios() {
+            const podiosDistancia = podiosPorDistancia[distanciaActiva];
+            if (!podiosDistancia) {
+                ui.podiosGrid.classList.add('hidden');
+                return;
+            }
+
+            const cards = [];
+            ['F', 'M', '-'].forEach(function(genero) {
+                if (!podiosDistancia[genero]) return;
+                Object.keys(podiosDistancia[genero]).sort(function(a, b) {
+                    return a.localeCompare(b, undefined, { sensitivity: 'base' });
+                }).forEach(function(categoria) {
+                    const top3 = podiosDistancia[genero][categoria];
+                    if (!top3.length) return;
+                    const generoLabel = genero === 'F' ? 'Femenino' : genero === 'M' ? 'Masculino' : 'General';
+                    cards.push(`
+                        <article class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+                            <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800">
+                                <p class="text-xs uppercase tracking-[0.3em] text-brand font-bold mb-2">${escapeHtml(generoLabel)}</p>
+                                <h3 class="text-xl font-black uppercase">${escapeHtml(categoria)}</h3>
+                            </div>
+                            <div class="p-5 space-y-3">
+                                ${top3[0] ? buildPodioRow(1, top3[0]) : ''}
+                                ${top3[1] ? buildPodioRow(2, top3[1]) : ''}
+                                ${top3[2] ? buildPodioRow(3, top3[2]) : ''}
+                            </div>
+                        </article>
+                    `);
+                });
+            });
+
+            ui.podiosGrid.innerHTML = cards.join('');
+            ui.podiosGrid.classList.remove('hidden');
+        }
+
+        async function cargarPodios() {
+            try {
+                const runtime = await YairStore.loadEventoRuntime(eventoActual);
+
+                if (!runtime) {
+                    ui.estadoError.classList.remove('hidden');
+                    ui.errorTexto.textContent = 'No se encontro el evento solicitado.';
+                    return;
+                }
+
+                eventoActual = runtime.eventoKey;
+                ui.tituloEvento.textContent = (runtime.config && runtime.config.nombre) || YairStore.humanizeEventoKey(eventoActual);
+                ui.btnVolver.onclick = function() {
+                    window.location.href = `resultados.html?evento=${encodeURIComponent(eventoActual)}`;
+                };
+
+                resultadosEvento = runtime.resultados;
+                if (!resultadosEvento || !Object.keys(resultadosEvento).length) {
+                    ui.estadoVacio.classList.remove('hidden');
+                    return;
+                }
+
+                buildPodios();
+                distanciaActiva = Object.keys(podiosPorDistancia).sort(function(a, b) {
+                    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+                })[0];
+                renderDistanceButtons();
+                renderPodios();
+            } catch (error) {
+                ui.estadoError.classList.remove('hidden');
+                ui.errorTexto.textContent = error.message;
+            }
+        }
+
+        cargarPodios();
+    </script>
+</body>
+</html>

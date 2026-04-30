@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados | Yair Timings</title>
+    <script>
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#00CFFF',
+                        dark: '#0E1525',
+                        card: '#141E33'
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Exo+2:wght@400;600;700;800&display=swap');
+        body { font-family: 'Exo 2', sans-serif; }
+        h1, h2, h3 { font-family: 'Russo One', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-dark text-gray-900 dark:text-white min-h-screen">
+    <div class="bg-gradient-to-br from-card via-dark to-black border-b border-white/10">
+        <nav class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <button onclick="window.location.href='index.html'" class="w-11 h-11 rounded-2xl bg-white/10 text-white/70 hover:text-white border border-white/10 transition">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div class="w-12 h-12 rounded-2xl bg-brand/15 text-brand flex items-center justify-center border border-brand/20">
+                    <i class="fa-solid fa-trophy text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs uppercase tracking-[0.3em] text-white/40 font-bold">Resultados oficiales</p>
+                    <h1 id="titulo-evento" class="text-2xl md:text-3xl text-white uppercase">Evento</h1>
+                </div>
+            </div>
+            <button id="theme-toggle" class="w-11 h-11 rounded-2xl bg-white/10 text-white/70 hover:text-white border border-white/10 transition">
+                <i id="theme-toggle-dark-icon" class="fa-solid fa-moon hidden"></i>
+                <i id="theme-toggle-light-icon" class="fa-solid fa-sun hidden"></i>
+            </button>
+        </nav>
+
+        <header class="max-w-7xl mx-auto px-6 pb-10">
+            <div class="grid lg:grid-cols-[1fr_auto] gap-6 items-end">
+                <div>
+                    <div id="estado-evento" class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs uppercase tracking-[0.28em] font-black bg-white/10 text-white/70 border border-white/10">
+                        <span class="w-2 h-2 rounded-full bg-brand"></span>
+                        Cargando
+                    </div>
+                    <p id="subtitulo-evento" class="mt-4 text-white/60 max-w-3xl">Clasificacion por distancia, categoria y genero. Usa los filtros para encontrar un atleta rapido y exportar la vista actual.</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <button id="btn-exportar" class="bg-white text-dark px-4 py-3 rounded-2xl text-sm font-black uppercase tracking-wide">
+                        <i class="fa-solid fa-file-csv mr-2 text-brand"></i> Descargar CSV
+                    </button>
+                    <button id="btn-exportar-excel" class="bg-green-500 text-white px-4 py-3 rounded-2xl text-sm font-black uppercase tracking-wide">
+                        <i class="fa-solid fa-file-excel mr-2"></i> Descargar Excel
+                    </button>
+                    <button id="btn-exportar-pdf" class="bg-red-500 text-white px-4 py-3 rounded-2xl text-sm font-black uppercase tracking-wide">
+                        <i class="fa-solid fa-file-pdf mr-2"></i> Descargar PDF
+                    </button>
+                    <button id="btn-premiacion" class="bg-yellow-400 text-black px-4 py-3 rounded-2xl text-sm font-black uppercase tracking-wide">
+                        <i class="fa-solid fa-medal mr-2"></i> Premiacion
+                    </button>
+                </div>
+            </div>
+        </header>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        <section class="bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 p-5 space-y-5">
+            <div class="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+                <div class="flex-1">
+                    <p class="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400 font-bold mb-3">Distancias</p>
+                    <div id="contenedor-distancias" class="flex flex-wrap gap-2"></div>
+                </div>
+                <div class="grid md:grid-cols-3 gap-3 lg:w-[42rem]">
+                    <input type="text" id="buscador" placeholder="Buscar atleta o dorsal..." class="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-brand">
+                    <select id="filtro-genero" class="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-brand">
+                        <option value="TODOS">Todos los generos</option>
+                    </select>
+                    <select id="filtro-categoria" class="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-brand">
+                        <option value="TODOS">Todas las categorias</option>
+                    </select>
+                </div>
+            </div>
+            <div id="stats-resumen" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+        </section>
+
+        <section id="estado-vacio" class="hidden bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 p-12 text-center">
+            <div class="w-16 h-16 rounded-full mx-auto mb-4 bg-amber-100 dark:bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                <i class="fa-solid fa-hourglass-half text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-black uppercase mb-3">Esperando resultados</h2>
+            <p class="text-gray-500 dark:text-gray-400">El evento ya es visible publicamente, pero aun no se ha cargado el CSV final.</p>
+        </section>
+
+        <section id="estado-error" class="hidden bg-white dark:bg-card rounded-3xl border border-red-200 dark:border-red-900/40 p-12 text-center">
+            <div class="w-16 h-16 rounded-full mx-auto mb-4 bg-red-100 dark:bg-red-500/10 text-red-500 flex items-center justify-center">
+                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-black uppercase mb-3">Evento no disponible</h2>
+            <p id="error-texto" class="text-gray-500 dark:text-gray-400"></p>
+        </section>
+
+        <section id="bloque-resultados" class="hidden bg-white dark:bg-card rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between gap-4">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400 font-bold">Clasificacion</p>
+                    <h2 id="titulo-carrera" class="text-2xl font-black uppercase">Distancia</h2>
+                </div>
+                <p id="conteo-filtrado" class="text-sm text-gray-500 dark:text-gray-400 font-bold">0 atletas</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-100 dark:bg-gray-900 text-gray-500 uppercase text-[11px]">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Pos</th>
+                            <th class="px-4 py-3 text-left">Dorsal</th>
+                            <th class="px-4 py-3 text-left">Atleta</th>
+                            <th class="px-4 py-3 text-left">Genero</th>
+                            <th class="px-4 py-3 text-left">Categoria</th>
+                            <th class="px-4 py-3 text-left">Pos Gen</th>
+                            <th class="px-4 py-3 text-left">Pos Cat</th>
+                            <th class="px-4 py-3 text-left">Tiempo</th>
+                            <th class="px-4 py-3 text-left">Ritmo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-resultados" class="divide-y divide-gray-200 dark:divide-gray-800"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+
+    <script src="./js/csvParser.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./js/csvParser.js"></script>
+    <script src="./js/supabaseClient.js"></script>
+    <script src="./js/supabaseStore.js"></script>
+    <script src="./js/exportTools.js"></script>
+
+    <script>
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+        function syncThemeIcons() {
+            if (document.documentElement.classList.contains('dark')) {
+                themeToggleLightIcon.classList.remove('hidden');
+                themeToggleDarkIcon.classList.add('hidden');
+            } else {
+                themeToggleDarkIcon.classList.remove('hidden');
+                themeToggleLightIcon.classList.add('hidden');
+            }
+        }
+
+        syncThemeIcons();
+        document.getElementById('theme-toggle').addEventListener('click', function() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+            syncThemeIcons();
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let eventoActual = urlParams.get('evento') || 'evento-demo';
+        let eventoConfig = null;
+        let resultadosEvento = null;
+        let distancias = [];
+        let distanciaActiva = null;
+        let atletasActuales = [];
+        let atletasFiltrados = [];
+
+        const ui = {
+            tituloEvento: document.getElementById('titulo-evento'),
+            estadoEvento: document.getElementById('estado-evento'),
+            subtituloEvento: document.getElementById('subtitulo-evento'),
+            contenedorDistancias: document.getElementById('contenedor-distancias'),
+            buscador: document.getElementById('buscador'),
+            filtroGenero: document.getElementById('filtro-genero'),
+            filtroCategoria: document.getElementById('filtro-categoria'),
+            statsResumen: document.getElementById('stats-resumen'),
+            estadoVacio: document.getElementById('estado-vacio'),
+            estadoError: document.getElementById('estado-error'),
+            errorTexto: document.getElementById('error-texto'),
+            bloqueResultados: document.getElementById('bloque-resultados'),
+            tituloCarrera: document.getElementById('titulo-carrera'),
+            conteoFiltrado: document.getElementById('conteo-filtrado'),
+            tabla: document.getElementById('tabla-resultados')
+        };
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function sortDistanceLabels(values) {
+            return (values || []).slice().sort(function(a, b) {
+                return String(a || '').localeCompare(String(b || ''), undefined, { numeric: true, sensitivity: 'base' });
+            });
+        }
+
+        function validTimeSeconds(value) {
+            const seconds = YairStore.timeToSortableSeconds(value);
+            return Number.isFinite(seconds) ? seconds : Number.POSITIVE_INFINITY;
+        }
+
+        function buildAthleteRows(distanceKey) {
+            const bucket = resultadosEvento[distanceKey] || {};
+            const atletas = Object.keys(bucket).map(function(dorsalKey) {
+                return Object.assign({ dorsal: dorsalKey }, bucket[dorsalKey]);
+            });
+
+            atletas.sort(function(a, b) {
+                return validTimeSeconds(a.tiempo_oficial) - validTimeSeconds(b.tiempo_oficial);
+            });
+
+            let posCatCounters = {};
+            let posGenderCounters = {};
+
+            atletas.forEach(function(atleta, index) {
+                const generoKey = atleta.genero || '-';
+                const categoriaKey = atleta.categoria || 'General';
+                posGenderCounters[generoKey] = (posGenderCounters[generoKey] || 0) + 1;
+                posCatCounters[categoriaKey] = (posCatCounters[categoriaKey] || 0) + 1;
+                if (atleta.posGral == null) atleta.posGral = index + 1;
+                if (atleta.posGenero == null) atleta.posGenero = posGenderCounters[generoKey];
+                if (atleta.posCategoria == null) atleta.posCategoria = posCatCounters[categoriaKey];
+            });
+
+            return atletas;
+        }
+
+        function renderStats(distanceRows) {
+            const total = distanceRows.length;
+            const llegados = distanceRows.filter(function(item) {
+                return Number.isFinite(validTimeSeconds(item.tiempo_oficial));
+            }).length;
+            const mujeres = distanceRows.filter(function(item) { return item.genero === 'F'; }).length;
+            const categorias = Array.from(new Set(distanceRows.map(function(item) { return item.categoria || 'General'; }))).length;
+
+            const cards = [
+                { label: 'Distancias', value: distancias.length, color: 'text-brand' },
+                { label: 'Atletas', value: total, color: 'text-gray-900 dark:text-white' },
+                { label: 'Llegados', value: llegados, color: 'text-green-500' },
+                { label: 'Categorias', value: categorias, color: 'text-yellow-500' }
+            ];
+
+            ui.statsResumen.innerHTML = cards.map(function(card) {
+                return `
+                    <div class="bg-gray-50 dark:bg-dark rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                        <p class="text-xs uppercase font-bold text-gray-500">${escapeHtml(card.label)}</p>
+                        <p class="text-2xl font-black mt-2 ${card.color}">${escapeHtml(card.value)}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderDistanceButtons() {
+            ui.contenedorDistancias.innerHTML = distancias.map(function(distance) {
+                const active = distance === distanciaActiva;
+                return `
+                    <button data-distancia="${escapeHtml(distance)}" class="distance-chip px-4 py-2 rounded-2xl text-sm font-black uppercase tracking-wide transition ${active ? 'bg-brand text-dark' : 'bg-gray-100 dark:bg-dark border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300'}">
+                        ${escapeHtml(distance)}
+                    </button>
+                `;
+            }).join('');
+
+            ui.contenedorDistancias.querySelectorAll('.distance-chip').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    distanciaActiva = button.dataset.distancia;
+                    syncDistanceView();
+                });
+            });
+        }
+
+        function syncCategoryOptions() {
+            const categorias = Array.from(new Set(atletasActuales.map(function(item) {
+                return item.categoria || 'General';
+            }))).sort(function(a, b) {
+                return a.localeCompare(b, undefined, { sensitivity: 'base' });
+            });
+
+            const generos = Array.from(new Set(atletasActuales.map(function(item) {
+                return item.genero || '-';
+            }))).sort();
+
+            const selectedGenero = ui.filtroGenero.value;
+            const selectedCategoria = ui.filtroCategoria.value;
+
+            ui.filtroGenero.innerHTML = '<option value="TODOS">Todos los generos</option>' + generos.map(function(item) {
+                return `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`;
+            }).join('');
+
+            ui.filtroCategoria.innerHTML = '<option value="TODOS">Todas las categorias</option>' + categorias.map(function(item) {
+                return `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`;
+            }).join('');
+
+            if (Array.from(ui.filtroGenero.options).some(function(option) { return option.value === selectedGenero; })) {
+                ui.filtroGenero.value = selectedGenero;
+            }
+            if (Array.from(ui.filtroCategoria.options).some(function(option) { return option.value === selectedCategoria; })) {
+                ui.filtroCategoria.value = selectedCategoria;
+            }
+        }
+
+        function renderTable() {
+            const search = ui.buscador.value.trim().toLowerCase();
+            const genero = ui.filtroGenero.value;
+            const categoria = ui.filtroCategoria.value;
+
+            atletasFiltrados = atletasActuales.filter(function(atleta) {
+                const hayTexto = atleta.nombre.toLowerCase().includes(search) || atleta.dorsal.toLowerCase().includes(search);
+                const pasaGenero = genero === 'TODOS' || atleta.genero === genero;
+                const pasaCategoria = categoria === 'TODOS' || atleta.categoria === categoria;
+                return hayTexto && pasaGenero && pasaCategoria;
+            });
+
+            ui.tituloCarrera.textContent = `Clasificacion - ${distanciaActiva}`;
+            ui.conteoFiltrado.textContent = `${atletasFiltrados.length} atletas visibles`;
+
+            if (!atletasFiltrados.length) {
+                ui.tabla.innerHTML = '<tr><td colspan="9" class="px-4 py-10 text-center text-gray-500">No hay atletas para los filtros actuales.</td></tr>';
+                return;
+            }
+
+            ui.tabla.innerHTML = atletasFiltrados.map(function(atleta) {
+                return `
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/40 cursor-pointer transition" onclick="window.location.href='atleta.html?evento=${encodeURIComponent(eventoActual)}&distancia=${encodeURIComponent(distanciaActiva)}&dorsal=${encodeURIComponent(atleta.dorsal)}'">
+                        <td class="px-4 py-3 font-black text-brand">${escapeHtml(atleta.posGral)}</td>
+                        <td class="px-4 py-3 font-mono">#${escapeHtml(atleta.dorsal)}</td>
+                        <td class="px-4 py-3">
+                            <p class="font-bold">${escapeHtml(atleta.nombre)}</p>
+                            <p class="text-xs text-gray-500">${escapeHtml(atleta.distancia)}</p>
+                        </td>
+                        <td class="px-4 py-3">${escapeHtml(atleta.genero || '-')}</td>
+                        <td class="px-4 py-3">${escapeHtml(atleta.categoria || 'General')}</td>
+                        <td class="px-4 py-3">${escapeHtml(atleta.posGenero != null ? atleta.posGenero : '-')}</td>
+                        <td class="px-4 py-3">${escapeHtml(atleta.posCategoria != null ? atleta.posCategoria : '-')}</td>
+                        <td class="px-4 py-3 font-mono font-bold">${escapeHtml(atleta.tiempo_oficial || '--:--:--')}</td>
+                        <td class="px-4 py-3 font-mono">${escapeHtml(atleta.ritmo || '--:--')}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function syncDistanceView() {
+            renderDistanceButtons();
+            atletasActuales = buildAthleteRows(distanciaActiva);
+            renderStats(atletasActuales);
+            syncCategoryOptions();
+            renderTable();
+        }
+
+        function buildExportColumns() {
+            return [
+                { label: 'PosGral', value: function(atleta) { return atleta.posGral; }, width: 42, bold: true, color: '#00CFFF' },
+                { label: 'Dorsal', value: function(atleta) { return atleta.dorsal; }, width: 56, mono: true },
+                { label: 'Nombre', value: function(atleta) { return atleta.nombre; }, width: 178, bold: true },
+                { label: 'Genero', value: function(atleta) { return atleta.genero || '-'; }, width: 44, align: 'center' },
+                { label: 'Categoria', value: function(atleta) { return atleta.categoria || 'General'; }, width: 108 },
+                { label: 'Distancia', value: function(atleta) { return atleta.distancia || distanciaActiva; }, width: 106 },
+                { label: 'PosGenero', value: function(atleta) { return atleta.posGenero != null ? atleta.posGenero : '-'; }, width: 58, align: 'center' },
+                { label: 'PosCategoria', value: function(atleta) { return atleta.posCategoria != null ? atleta.posCategoria : '-'; }, width: 62, align: 'center' },
+                { label: 'TiempoOficial', value: function(atleta) { return atleta.tiempo_oficial || '--:--:--'; }, width: 82, mono: true, bold: true },
+                { label: 'Ritmo', value: function(atleta) { return atleta.ritmo || '--:--'; }, width: 58, mono: true }
+            ];
+        }
+
+        function getExportRows() {
+            return atletasFiltrados.slice();
+        }
+
+        function getExportMeta(rows) {
+            const llegados = rows.filter(function(item) {
+                return Number.isFinite(validTimeSeconds(item.tiempo_oficial));
+            }).length;
+            const categorias = Array.from(new Set(rows.map(function(item) {
+                return item.categoria || 'General';
+            }))).length;
+            return {
+                llegados: llegados,
+                categorias: categorias
+            };
+        }
+
+        function buildExportFilename(extension) {
+            const slugEvento = window.YairExport ? YairExport.slugify(eventoActual) : eventoActual;
+            const slugDistancia = window.YairExport ? YairExport.slugify(distanciaActiva) : distanciaActiva;
+            return `clasificacion_${slugEvento}_${slugDistancia}.${extension}`;
+        }
+
+        function exportCurrentView() {
+            if (!atletasFiltrados.length) return;
+
+            let csv = 'data:text/csv;charset=utf-8,\uFEFF';
+            csv += 'PosGral;Dorsal;Nombre;Genero;Categoria;Distancia;PosGenero;PosCategoria;TiempoOficial;Ritmo\r\n';
+
+            atletasFiltrados.forEach(function(atleta) {
+                const row = [
+                    atleta.posGral,
+                    atleta.dorsal,
+                    atleta.nombre,
+                    atleta.genero,
+                    atleta.categoria,
+                    atleta.distancia,
+                    atleta.posGenero,
+                    atleta.posCategoria,
+                    atleta.tiempo_oficial,
+                    atleta.ritmo
+                ].map(function(cell) {
+                    return `"${String(cell == null ? '' : cell).replace(/"/g, '""')}"`;
+                }).join(';');
+                csv += row + '\r\n';
+            });
+
+            const link = document.createElement('a');
+            link.href = encodeURI(csv);
+            link.download = `clasificacion_${eventoActual}_${distanciaActiva}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportExcelCurrentView() {
+            const rows = getExportRows();
+            if (!rows.length || !window.YairExport) return;
+
+            const meta = getExportMeta(rows);
+            YairExport.downloadExcelTable({
+                title: `Clasificacion - ${ui.tituloEvento.textContent}`,
+                subtitle: `Distancia ${distanciaActiva}. Exportacion de la vista actual de resultados.`,
+                meta: [
+                    { label: 'Evento', value: ui.tituloEvento.textContent },
+                    { label: 'Distancia', value: distanciaActiva },
+                    { label: 'Atletas', value: rows.length },
+                    { label: 'Llegados', value: meta.llegados }
+                ],
+                columns: buildExportColumns(),
+                rows: rows
+            }, buildExportFilename('xls'));
+        }
+
+        function exportPdfCurrentView() {
+            const rows = getExportRows();
+            if (!rows.length || !window.YairExport) return;
+
+            const meta = getExportMeta(rows);
+            YairExport.downloadResultsPdf({
+                title: `Clasificacion - ${ui.tituloEvento.textContent}`,
+                subtitle: `Distancia ${distanciaActiva}. Resultados exportados con los filtros visibles en pantalla.`,
+                meta: [
+                    { label: 'Distancia', value: distanciaActiva },
+                    { label: 'Atletas', value: rows.length },
+                    { label: 'Fecha', value: new Date().toLocaleDateString('es-CO') }
+                ],
+                summaryCards: [
+                    { label: 'Atletas visibles', value: rows.length, color: '#0E1525', help: 'Vista actual' },
+                    { label: 'Llegados', value: meta.llegados, color: '#22c55e', help: 'Con tiempo oficial' },
+                    { label: 'Categorias', value: meta.categorias, color: '#facc15', help: 'En la exportacion' },
+                    { label: 'Distancia', value: distanciaActiva, color: '#00CFFF', help: 'Clasificacion activa' }
+                ],
+                columns: buildExportColumns(),
+                rows: rows,
+                footer: 'Clasificacion exportada desde Yair Timings'
+            }, buildExportFilename('pdf'));
+        }
+
+        function showStatusChip(hasResults) {
+            if (hasResults) {
+                ui.estadoEvento.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs uppercase tracking-[0.28em] font-black bg-green-500/15 text-green-300 border border-green-500/30';
+                ui.estadoEvento.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-400"></span> Resultados disponibles';
+            } else {
+                ui.estadoEvento.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs uppercase tracking-[0.28em] font-black bg-amber-500/15 text-amber-300 border border-amber-500/30';
+                ui.estadoEvento.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span> Esperando resultados';
+            }
+        }
+
+        async function cargarEvento() {
+            try {
+                const runtime = await YairStore.loadEventoRuntime(eventoActual);
+
+                if (!runtime) {
+                    ui.estadoError.classList.remove('hidden');
+                    ui.errorTexto.textContent = 'No se encontro el evento solicitado.';
+                    return;
+                }
+
+                eventoActual = runtime.eventoKey;
+                eventoConfig = runtime.config || {};
+                resultadosEvento = runtime.resultados;
+
+                ui.tituloEvento.textContent = eventoConfig.nombre || YairStore.humanizeEventoKey(eventoActual);
+                ui.subtituloEvento.textContent = resultadosEvento
+                    ? 'Clasificacion cargada desde el cache local del evento.'
+                    : 'El evento esta publicado, pero aun no se ha cargado el CSV final.';
+                showStatusChip(!!resultadosEvento);
+
+                document.getElementById('btn-premiacion').addEventListener('click', function() {
+                    window.location.href = `premiacion.html?evento=${encodeURIComponent(eventoActual)}`;
+                });
+
+                document.getElementById('btn-exportar').addEventListener('click', exportCurrentView);
+                document.getElementById('btn-exportar-excel').addEventListener('click', exportExcelCurrentView);
+                document.getElementById('btn-exportar-pdf').addEventListener('click', exportPdfCurrentView);
+
+                if (!resultadosEvento) {
+                    ui.estadoVacio.classList.remove('hidden');
+                    return;
+                }
+
+                distancias = sortDistanceLabels(Object.keys(resultadosEvento));
+                distanciaActiva = distancias[0] || null;
+
+                if (!distanciaActiva) {
+                    ui.estadoVacio.classList.remove('hidden');
+                    return;
+                }
+
+                ui.bloqueResultados.classList.remove('hidden');
+                syncDistanceView();
+
+                ui.buscador.addEventListener('input', renderTable);
+                ui.filtroGenero.addEventListener('change', renderTable);
+                ui.filtroCategoria.addEventListener('change', renderTable);
+            } catch (error) {
+                ui.estadoError.classList.remove('hidden');
+                ui.errorTexto.textContent = error.message;
+            }
+        }
+
+        cargarEvento();
+    </script>
+</body>
+</html>

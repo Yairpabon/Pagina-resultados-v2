@@ -1,0 +1,59 @@
+# ========================================================
+# Yair Timings - Configuracion Apache para cPanel
+# ========================================================
+
+# 1) Forzar HTTPS (recomendado, descomenta si ya tienes SSL)
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+RewriteEngine On
+
+# 2) Si la URL ya tiene .html, redirigir a la version sin .html
+#    (asi no aparecen URLs duplicadas con y sin .html)
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.html[\s?] [NC]
+RewriteRule ^ /%1 [R=301,L,NE]
+
+# 3) Si la URL no tiene extension y no es un directorio/archivo,
+#    servir el .html correspondiente internamente.
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.+?)/?$ $1.html [L]
+
+# 4) Pagina de inicio explicita
+DirectoryIndex index.html
+
+# 5) Tipos MIME (Apache moderno ya los reconoce, redundancia segura)
+AddType text/html .html
+AddType application/javascript .js
+AddType text/css .css
+AddType application/json .json
+
+# 6) Cache largo para assets estaticos (mejora velocidad)
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/jpeg "access plus 30 days"
+  ExpiresByType image/svg+xml "access plus 30 days"
+  ExpiresByType image/webp "access plus 30 days"
+  ExpiresByType font/woff2 "access plus 30 days"
+</IfModule>
+
+# 7) Compresion gzip
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+# 8) Headers de seguridad basicos
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# 9) Pagina de error 404 (opcional, redirige al home)
+ErrorDocument 404 /index.html

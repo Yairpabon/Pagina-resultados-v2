@@ -1,0 +1,11 @@
+Global;Género-pos;Categoría-pos;BIB;Nombre;Género;Categoría;distancia;Tiempo de carrera;Ritmo
+1;1;1;101;Laura Méndez;F;Open F;5K;21:10;4:14 min/Km
+2;1;1;202;David Rojas;M;Open M;5K;21:44;4:21 min/Km
+3;2;2;105;Camila Torres;F;Master F;5K;24:19;4:52 min/Km
+4;2;2;105;Camila Torres;F;Master F;5K;24:05;4:49 min/Km
+1;1;1;310;Andrés Peña;M;Open M;10K;41:02;4:06 min/Km
+2;1;1;415;Marcela Cruz;F;Open F;10K;45:38;4:34 min/Km
+3;2;1;311;Juan Pablo Ríos;M;Master M;10K;00:47:15;4:43 min/Km
+1;1;1;501;Natalia Gómez;F;Open F;21K;01:42:15;4:52 min/Km
+2;1;1;601;Santiago Vera;M;Open M;21K;01:28:40;4:13 min/Km
+3;2;2;777;Mateo Sierra;M;Ultra M;21K;25:00:00;71:05 min/Km

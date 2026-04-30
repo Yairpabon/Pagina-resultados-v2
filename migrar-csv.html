@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>Migrar CSV | Yair Timings</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: '#00CFFF', dark: '#0A0A0A', card: '#111111' } } } };
+  </script>
+</head>
+<body class="bg-gray-950 text-white min-h-screen p-6">
+  <div class="max-w-3xl mx-auto space-y-6">
+    <header class="flex items-center gap-3">
+      <i class="fa-solid fa-database text-brand text-3xl"></i>
+      <div>
+        <h1 class="text-2xl font-black uppercase">Migrar CSV de demo a Supabase</h1>
+        <p class="text-gray-400 text-sm">Sube los CSV de la carpeta <code>resultados-csv/</code> a tu base de datos.</p>
+      </div>
+    </header>
+
+    <section id="auth-box" class="bg-card border border-gray-800 rounded-2xl p-6 space-y-3">
+      <h2 class="font-bold text-lg">Paso 1 - Autenticarte</h2>
+      <div id="auth-status" class="text-sm text-gray-400">Verificando sesion...</div>
+      <form id="login-form" class="grid grid-cols-1 md:grid-cols-3 gap-3 hidden">
+        <input id="login-email" type="email" placeholder="email" class="bg-dark border border-gray-700 rounded-lg px-3 py-2">
+        <input id="login-pass" type="password" placeholder="contrasena" class="bg-dark border border-gray-700 rounded-lg px-3 py-2">
+        <button class="bg-brand text-dark font-bold rounded-lg px-3 py-2">Ingresar</button>
+      </form>
+      <button id="logout-btn" class="hidden text-xs text-gray-400 underline">Cerrar sesion</button>
+    </section>
+
+    <section class="bg-card border border-gray-800 rounded-2xl p-6 space-y-3">
+      <h2 class="font-bold text-lg">Paso 2 - Subir CSV</h2>
+      <p class="text-sm text-gray-400">
+        Selecciona los CSV manualmente. Para cada uno se creara un evento usando el nombre del archivo
+        (sin extension) como <code>eventoKey</code>.
+      </p>
+      <input id="file-input" type="file" accept=".csv" multiple
+             class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-brand file:text-dark hover:file:bg-cyan-300">
+      <div class="flex items-center gap-3">
+        <label class="text-sm flex items-center gap-2">
+          <input type="checkbox" id="auto-publish" checked> Publicar el evento al subir
+        </label>
+      </div>
+      <button id="run-btn" class="bg-brand text-dark font-black px-6 py-3 rounded-xl disabled:opacity-50" disabled>
+        <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Subir a Supabase
+      </button>
+    </section>
+
+    <section class="bg-card border border-gray-800 rounded-2xl p-6">
+      <h2 class="font-bold text-lg mb-2">Log</h2>
+      <pre id="log" class="text-xs bg-dark p-4 rounded-lg overflow-auto max-h-96 whitespace-pre-wrap"></pre>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./js/csvParser.js"></script>
+  <script src="./js/supabaseClient.js"></script>
+  <script src="./js/supabaseStore.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const log = (msg) => { $('log').textContent += msg + '\n'; $('log').scrollTop = $('log').scrollHeight; };
+
+    async function refreshAuthUI() {
+      const user = await YairSupabase.currentUser();
+      if (user) {
+        $('auth-status').innerHTML = 'Autenticado como <strong>' + user.email + '</strong>';
+        $('login-form').classList.add('hidden');
+        $('logout-btn').classList.remove('hidden');
+        $('run-btn').disabled = false;
+      } else {
+        $('auth-status').textContent = 'No has iniciado sesion.';
+        $('login-form').classList.remove('hidden');
+        $('logout-btn').classList.add('hidden');
+        $('run-btn').disabled = true;
+      }
+    }
+
+    $('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await YairSupabase.signIn($('login-email').value.trim(), $('login-pass').value);
+        await refreshAuthUI();
+      } catch (err) {
+        alert('Error: ' + (err.message || err));
+      }
+    });
+
+    $('logout-btn').addEventListener('click', async () => {
+      await YairSupabase.signOut();
+      await refreshAuthUI();
+    });
+
+    function readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsText(file, 'utf-8');
+      });
+    }
+
+    function eventoKeyFromFileName(name) {
+      return YairStore.slugify(name.replace(/\.csv$/i, ''));
+    }
+
+    $('run-btn').addEventListener('click', async () => {
+      const files = Array.from($('file-input').files || []);
+      if (!files.length) { alert('Selecciona al menos un CSV.'); return; }
+      $('run-btn').disabled = true;
+      $('log').textContent = '';
+
+      for (const file of files) {
+        const eventoKey = eventoKeyFromFileName(file.name);
+        log('--> ' + file.name + '  ->  evento_key=' + eventoKey);
+        try {
+          const text = await readFileAsText(file);
+
+          // 1) Crear/actualizar evento minimo
+          await YairStore.saveEventoConfig(eventoKey, {
+            nombre: YairStore.humanizeEventoKey(eventoKey),
+            fecha: new Date().toISOString().slice(0, 10)
+          });
+
+          // 2) Parsear y guardar resultados
+          const result = await YairStore.saveResultadosFromCsv(eventoKey, text, file.name);
+          log('   atletas: ' + result.meta.totalAtletas +
+              ' | distancias: ' + (result.meta.distancias || []).join(', ') +
+              ' | duplicados: ' + result.meta.duplicadosCount +
+              ' | errores: ' + result.meta.erroresCount);
+
+          // 3) Publicar
+          if ($('auto-publish').checked) {
+            await YairStore.saveEstadoEvento(eventoKey, { publicado: true });
+            log('   publicado: SI');
+          }
+        } catch (err) {
+          log('   ERROR: ' + (err && err.message ? err.message : err));
+        }
+      }
+      log('\nFinalizado.');
+      $('run-btn').disabled = false;
+    });
+
+    refreshAuthUI();
+  </script>
+</body>
+</html>
