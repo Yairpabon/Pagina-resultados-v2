@@ -9,6 +9,9 @@
 
 RewriteEngine On
 
+# URLs amigables para eventos
+RewriteRule ^resultados/([^/]+)/?$ /resultados.html?evento=$1 [L,QSA]
+
 # 2) Si la URL ya tiene .html, redirigir a la version sin .html
 #    (asi no aparecen URLs duplicadas con y sin .html)
 RewriteCond %{THE_REQUEST} \s/+(.+?)\.html[\s?] [NC]
